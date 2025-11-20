@@ -10,176 +10,111 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header id="header">
-    <nav class="navbar">
-      <div class="logo">Ruben.</div>
-      <ul class="nav-links">
-        <li><a href="#home">Home</a></li>
-        <li><a href="#over-mij">Over</a></li>
-        <li><a href="#projecten">Projecten</a></li>
-        <li><a href="#skills">Skills</a></li>
-        <li><a href="#contact">Contact</a></li>
-      </ul>
-      <div class="hamburger">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </nav>
-  </header>
+  <header>
+        <nav>
+            <a href="index.html">Home</a>
+            <div class="dropdown">
+                <a href="">Interviews</a>
+                <div class="dropdown-content">
+                    <a href="interview-taeke.html">Interview Taeke</a>
+                    <a href="interview-ruben.html">Interview Ruben</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="">Portfolio's</a>
+                <div class="dropdown-content">
+                    <a href="portfolio-ruben.html">Portfolio Ruben</a>
+                    <a href="portfolio-Taeke.html">Portfolio Taeke</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="">Studie</a>
+                <div class="dropdown-content">
+                    <a href="canvas.html">Canvas</a>
+                    <a href="eduarte.html">Eduarte</a>
+                    <a href="opleidingswijzer.html">Opleidingswijzer</a>
+                    <a href="studentenstatuut.html">Studentenstatuut</a>
+                    <a href="slb-ruben.html">SLB'er</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <a href="">Demonstraties</a>
+                <div class="dropdown-content">
+                    <a href="git-ruben.html">Git</a>
+                    <a href="HTML-Css.html">HTML&CSS</a>
+                    <a href="formuliera.html">Formulier A</a>
+                    <a href="formulier.html">Formulier B</a>
+                    <a href="tabela.html">Tabel A</a>
+                    <a href="tabel-b.html">Tabel B</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h1>Ruben</h1>
+            <h3>Junior Full-Stack Developer</h3>
+            <p>Passievolle ontwikkelaar die zich richt op het bouwen van gebruiksvriendelijke, efficiente en effectieve webapplicaties.</p>
+            <p>Bekijk mijn <a href="#projecten">projecten</a></p>
+        </section>
+        <section>
+            <h1>About</h1>
+            <h3>School & opleidingen</h3>
+            <table>
+                <tr><th>Opleiding</th><th>Tijd</th></tr>
+                <tr><td>Basisschool</td><td>2013 - 2021</td></tr>
+                <tr><td>Voortgezet onderwijs (Havo)</td><td>2021 - 2025</td></tr>
+                <tr><td>Middelbaar beroepsonderwijs</td><td>2025 - Heden</td></tr>
+            </table>
+        </section>
+        <section>
+            <h1>Projecten</h1>
 
-  <main>
-    <section id="home" class="hero">
-      <div class="hero-content fade-in">
-        <h1>Hallo, ik ben <span class="highlight">Ruben</span></h1>
-        <h3>Junior Full-Stack Developer</h3>
-        <p>Passievolle ontwikkelaar die zich richt op het bouwen van gebruiksvriendelijke, efficiënte en effectieve webapplicaties.</p>
-        <a href="#projecten" class="btn">Bekijk mijn projecten</a>
-      </div>
-    </section>
+            <div>
+                <h3>Ouderavond project</h3>
+                <p>Project voor de ouders om uit te leggen hoe alles op school werkt.</p>
+                <h4>Talen gebruikt:</h4>
+                <ul>
+                    <li>HTML</li>
+                    <li>CSS</li>
+                </ul>
+                <a href="https://github.com/TechniekCollegeRotterdam/project-p1-ouderavond-sod1c-westland">GitHub</a>
+            </div>
+        </section>
+        <section>
+            <h1>Skills</h1>
 
-    <section id="over-mij" class="section">
-      <div class="container">
-        <h2 class="section-title">Over Mij</h2>
-        <div class="about-content">
-          <div class="education-timeline">
-            <h3>School & Opleidingen</h3>
-            <div class="timeline-item">
-              <div class="timeline-date">2025 - Heden</div>
-              <div class="timeline-content">
-                <h4>Middelbaar Beroepsonderwijs</h4>
-                <p>Software Development</p>
-              </div>
-            </div>
-            <div class="timeline-item">
-              <div class="timeline-date">2021 - 2025</div>
-              <div class="timeline-content">
-                <h4>Voortgezet Onderwijs (Havo)</h4>
-                <p>Profiel: Natuur & Techniek</p>
-              </div>
-            </div>
-            <div class="timeline-item">
-              <div class="timeline-date">2013 - 2021</div>
-              <div class="timeline-content">
-                <h4>Basisschool</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="projecten" class="section bg-dark">
-      <div class="container">
-        <h2 class="section-title">Projecten</h2>
-        <div class="projects-grid">
-          <div class="project-card">
-            <div class="project-info">
-              <h3>Ouderavond Project</h3>
-              <p>Een webapplicatie voor ouders om inzicht te krijgen in de schoolprocedures en afspraken.</p>
-              <div class="tags">
-                <span>HTML</span>
-                <span>CSS</span>
-              </div>
-              <a href="https://github.com/TechniekCollegeRotterdam/project-p1-ouderavond-sod1c-westland" target="_blank" class="btn-small">Bekijk op GitHub</a>
-            </div>
-          </div>
-          <!-- Placeholder voor toekomstige projecten -->
-          <div class="project-card placeholder">
-            <div class="project-info">
-              <h3>Binnenkort meer...</h3>
-              <p>Ik werk momenteel aan nieuwe projecten.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="skills" class="section">
-      <div class="container">
-        <h2 class="section-title">Skills</h2>
-        <div class="skills-grid">
-          <div class="skill-category">
             <h3>Programmeertalen</h3>
-            <ul class="skill-list">
-              <li>HTML</li>
-              <li>CSS</li>
-              <li>SQL</li>
+            <ul>
+                <li>SQL</li>
             </ul>
-          </div>
-          <div class="skill-category">
+
+            <h3>Frameworks en libraries</h3>
+            <ul>
+                <li>-</li>
+            </ul>
+
             <h3>Databases</h3>
-            <ul class="skill-list">
-              <li>MySQL</li>
+            <ul>
+                <li>MySQL</li>
             </ul>
-          </div>
-          <div class="skill-category">
-            <h3>Tools & Workflow</h3>
-            <ul class="skill-list">
-              <li>Git</li>
-              <li>Docker</li>
+
+            <h3>Tools en workflow</h3>
+            <ul>
+                <li>Git</li>
+                <li>Docker</li>
             </ul>
-          </div>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <section id="contact" class="section bg-dark">
-      <div class="container">
-        <h2 class="section-title">Contact</h2>
-        <div class="contact-content">
-          <p>Heb je een vraag of wil je samenwerken? Neem gerust contact op.</p>
-          <div class="contact-links">
-            <a href="mailto:ruben.blok36@gmail.com" class="contact-item">
-              <span class="icon">📧</span> ruben.blok36@gmail.com
-            </a>
-            <a href="https://github.com/ruben-blok" target="_blank" class="contact-item">
-              <span class="icon">🐙</span> GitHub
-            </a>
-            <a href="https://www.linkedin.com/in/ruben-blok-069597389/" target="_blank" class="contact-item">
-              <span class="icon">💼</span> LinkedIn
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="container">
-      <p>&copy; 2025 Ruben Blok. Alle rechten voorbehouden.</p>
-    </div>
-  </footer>
-
-  <script>
-    // Simple script for mobile menu toggle (optional for now, but good structure)
-    const hamburger = document.querySelector('.hamburger');
-    const navLinks = document.querySelector('.nav-links');
-
-    if(hamburger) {
-        hamburger.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-            hamburger.classList.toggle('toggle');
-        });
-    }
-
-    // Intersection Observer for fade-in animations
-    const observerOptions = {
-      threshold: 0.1
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, observerOptions);
-
-    document.querySelectorAll('section').forEach(section => {
-      section.classList.add('fade-in-section');
-      observer.observe(section);
-    });
-  </script>
+        <section style="margin-bottom: 20px;">
+            <h1>Contact</h1>
+            <p>Email: ruben.blok36@gmail.com</p>
+            <a href="https://github.com/ruben-blok">GitHub</a>
+            <a href="https://www.linkedin.com/in/ruben-blok-069597389/">LinkedIn</a>
+        </section>
+    </main>
+    <footer>
+        <p>Copyright © 2025 Ruben & Taeke B.V.</p>
+    </footer>
 </body>
 </html>
