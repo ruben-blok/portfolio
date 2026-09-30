@@ -113,22 +113,6 @@
     background: #e8e8df;
   }
 
-  .map-frame::after {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background-image:
-      linear-gradient(color-mix(in oklab, var(--color-forest) 6%, transparent) 1px, transparent 1px),
-      linear-gradient(
-        90deg,
-        color-mix(in oklab, var(--color-forest) 6%, transparent) 1px,
-        transparent 1px
-      );
-    background-size: 2.25rem 2.25rem;
-    content: "";
-    pointer-events: none;
-  }
-
   .map-canvas {
     width: 100%;
     height: 100%;
@@ -137,6 +121,51 @@
   .map-canvas:focus-within {
     outline: 2px solid var(--color-forest);
     outline-offset: -4px;
+  }
+
+  /*
+   * The WebGL canvas is only a source frame: it keeps its place in the layout so
+   * MapLibre can measure it, while the ASCII canvas paints the converted grid on top
+   * of it. Labels, markers and the status message stack above that in turn.
+   */
+  .map-ascii-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .map-ascii {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-labels {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .map-canvas :is(.maplibregl-marker, .maplibregl-popup) {
+    z-index: 3;
+  }
+
+  .map-label {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    color: var(--color-forest-deep);
+    font-family: var(--font-body);
+    font-weight: 600;
+    line-height: 1;
+    text-shadow:
+      0 0 2px var(--color-paper),
+      0 0 2px var(--color-paper),
+      0 0 4px var(--color-paper);
+    translate: -50% -50%;
+    white-space: nowrap;
   }
 
   .map-status {

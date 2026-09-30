@@ -12,6 +12,14 @@ import { PoiDetail } from "@/components/poi-detail";
 import type { PointOfInterest } from "@/data/points-of-interest";
 import type { Project } from "@/data/projects";
 import {
+  type AsciiSample,
+  asciiSample,
+  asciiSurface,
+  DEFAULT_TONE,
+  drawAsciiArt,
+  toAsciiArt,
+} from "@/lib/ascii-map";
+import {
   circlePolygon,
   GENERAL_MAX_ZOOM,
   openStreetMapUrl,
@@ -19,6 +27,14 @@ import {
   pointPosition,
   worldCamera,
 } from "@/lib/map-camera";
+import {
+  LABELLED_LAYERS,
+  type LabelFeature,
+  labelMetrics,
+  type MapLabel,
+  measureText,
+  toLabels,
+} from "@/lib/map-labels";
 
 type PortfolioMapProps = {
   points: PointOfInterest[];
@@ -28,6 +44,25 @@ type PortfolioMapProps = {
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
 const MAP_LOAD_TIMEOUT = 15_000;
 const MARKER_LABEL_ZOOM = 4;
+const ASCII_INK = "#14332a";
+const ASCII_PAPER = "#e8e8df";
+const MAX_LABELS = 60;
+
+/**
+ * Copies the WebGL frame into a small scratch buffer and returns its pixels. Reading
+ * goes through a 2D context because `getImageData` is not available on a WebGL canvas,
+ * and downscaling in the same step keeps the readback cheap enough for every frame.
+ */
+function readFrame(source: HTMLCanvasElement, sample: AsciiSample) {
+  const scratch = document.createElement("canvas");
+  scratch.width = sample.width;
+  scratch.height = sample.height;
+  const context = scratch.getContext("2d", { willReadFrequently: true });
+  if (!context) return new Uint8ClampedArray(sample.width * sample.height * 4);
+
+  context.drawImage(source, 0, 0, sample.width, sample.height);
+  return context.getImageData(0, 0, sample.width, sample.height).data;
+}
 
 export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,6 +71,12 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const pointsRef = useRef(points);
   const reduceMotionRef = useRef(false);
   const selectPointRef = useRef<(point: PointOfInterest) => void>(() => undefined);
+  const asciiCanvasRef = useRef<HTMLCanvasElement>(null);
+  const measureContextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const labelsFrameRef = useRef<number | undefined>(undefined);
+  const pendingLabelsRef = useRef(false);
+  const labelsDirtyRef = useRef(true);
+  const [labels, setLabels] = useState<MapLabel[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [zoom, setZoom] = useState(1);
@@ -72,6 +113,84 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    /**
+     * Repaints the ASCII layer from the freshly rendered WebGL frame. MapLibre fires
+     * `render` synchronously after drawing, so the framebuffer is still readable here,
+     * which is why the context is created with a preserved drawing buffer.
+     */
+    const drawAsciiLayer = (map: MapLibreMap) => {
+      const canvas = asciiCanvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
+
+      const cssWidth = container.clientWidth;
+      const cssHeight = container.clientHeight;
+      if (!cssWidth || !cssHeight) return;
+
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const surface = asciiSurface(cssWidth, cssHeight, ratio, {
+        color: ASCII_INK,
+        background: ASCII_PAPER,
+      });
+
+      if (canvas.width !== surface.width || canvas.height !== surface.height) {
+        canvas.width = surface.width;
+        canvas.height = surface.height;
+      }
+
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) return;
+
+      const sample = asciiSample(surface);
+      const art = toAsciiArt(
+        readFrame(map.getCanvas(), sample),
+        sample,
+        surface.columns,
+        surface.rows,
+        DEFAULT_TONE,
+      );
+
+      drawAsciiArt(context, art, surface);
+    };
+
+    /**
+     * Label placement is comparatively expensive, so it runs on the frame after the
+     * ASCII paint and only when the camera or the tiles actually changed.
+     */
+    const refreshLabels = (map: MapLibreMap) => {
+      if (pendingLabelsRef.current) return;
+      pendingLabelsRef.current = true;
+
+      labelsFrameRef.current = window.requestAnimationFrame(() => {
+        pendingLabelsRef.current = false;
+        labelsDirtyRef.current = false;
+
+        const container = containerRef.current;
+        const measure = measureContextRef.current;
+        let features: LabelFeature[] = [];
+
+        try {
+          features = map.queryRenderedFeatures({
+            layers: LABELLED_LAYERS.filter((layer) => map.getLayer(layer)),
+          }) as unknown as LabelFeature[];
+        } catch {
+          setLabels([]);
+          return;
+        }
+
+        setLabels(
+          toLabels(features, (position) => map.project(position), {
+            zoom: map.getZoom(),
+            maxLabels: MAX_LABELS,
+            width: container?.clientWidth ?? 0,
+            height: container?.clientHeight ?? 0,
+            metrics: measure ? labelMetrics(measure) : undefined,
+            measure: measure ? (text) => measureText(measure, text) : undefined,
+          }),
+        );
+      });
+    };
+
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     reduceMotionRef.current = motionQuery.matches;
     const compact = window.matchMedia("(max-width: 767px)").matches;
@@ -89,6 +208,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         ...worldCamera(compact),
         maxZoom: GENERAL_MAX_ZOOM,
         attributionControl: false,
+        canvasContextAttributes: { preserveDrawingBuffer: true, antialias: false },
       });
       mapRef.current = map;
       map.addControl(new AttributionControl({ compact: false }), "bottom-right");
@@ -102,6 +222,9 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         map.setProjection({ type: "globe" });
         setStatus("ready");
         setZoom(map.getZoom());
+
+        const measureCanvas = document.createElement("canvas");
+        measureContextRef.current = measureCanvas.getContext("2d");
 
         const approximatePoints = pointsRef.current.filter(
           (point) => point.precision === "approximate",
@@ -158,10 +281,34 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         map.on("zoom", updateMarkerLabels);
       });
 
-      map.on("zoom", () => setZoom(map.getZoom()));
+      /**
+       * The basemap's own text is rasterised into the tiles and would be mangled by the
+       * ASCII conversion, so `refreshLabels` paints the names as real text on top. The
+       * symbol layers themselves stay visible, because they still supply the geometry
+       * that `queryRenderedFeatures` reports and the ASCII canvas covers the WebGL one.
+       */
+      map.on("render", () => {
+        drawAsciiLayer(map);
+        if (labelsDirtyRef.current) refreshLabels(map);
+      });
+
+      map.on("moveend", () => refreshLabels(map));
+      map.on("idle", () => refreshLabels(map));
+
+      map.on("zoom", () => {
+        labelsDirtyRef.current = true;
+        setZoom(map.getZoom());
+      });
+
+      map.on("move", () => {
+        labelsDirtyRef.current = true;
+      });
 
       if (typeof ResizeObserver !== "undefined") {
-        const observer = new ResizeObserver(() => map.resize());
+        const observer = new ResizeObserver(() => {
+          map.resize();
+          labelsDirtyRef.current = true;
+        });
         observer.observe(containerRef.current);
         resizeObserver = observer;
       }
@@ -172,6 +319,9 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
 
     return () => {
       window.clearTimeout(timeout);
+      if (labelsFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(labelsFrameRef.current);
+      }
       resizeObserver?.disconnect();
       for (const marker of markersRef.current) marker.remove();
       markersRef.current = [];
@@ -194,6 +344,27 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
           aria-describedby="map-instructie"
           data-status={status}
         />
+        {/*
+          The ASCII canvas is a decorative rendering of the same information the
+          accessible map below already exposes, so it is hidden from assistive tech.
+        */}
+        <div className="map-ascii-layer" aria-hidden="true">
+          <canvas ref={asciiCanvasRef} className="map-ascii" />
+        </div>
+        <div className="map-labels" aria-hidden="true">
+          {labels.map((label) => (
+            <span
+              key={label.id}
+              className="map-label"
+              style={{
+                transform: `translate(${label.x}px, ${label.y}px)`,
+                fontSize: `${0.625 + label.rank * 0.04}rem`,
+              }}
+            >
+              {label.text}
+            </span>
+          ))}
+        </div>
         {status === "loading" ? (
           <p className="map-status" role="status">
             Kaart wordt geladen…

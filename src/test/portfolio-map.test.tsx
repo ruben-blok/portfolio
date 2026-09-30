@@ -15,6 +15,14 @@ const mapMocks = vi.hoisted(() => {
     }),
     addSource: vi.fn(),
     addLayer: vi.fn(),
+    getLayer: vi.fn((id: string) => (id.startsWith("label_") ? { id } : undefined)),
+    setLayoutProperty: vi.fn(),
+    queryRenderedFeatures: vi.fn(() => []),
+    project: vi.fn((position: [number, number]) => ({
+      x: 40 + position[0] * 4,
+      y: 20 + position[1] * 4,
+    })),
+    getCanvas: vi.fn(() => document.createElement("canvas")),
     getZoom: vi.fn(() => 1.35),
     setMaxZoom: vi.fn(),
     flyTo: vi.fn(),
@@ -68,6 +76,7 @@ describe("portfolio-kaart", () => {
     act(() => emit("styledata"));
     expect(mapMocks.map.setProjection).toHaveBeenCalledWith({ type: "globe" });
     expect(screen.queryByText("Kaart wordt geladen…")).not.toBeInTheDocument();
+    expect(document.querySelector("canvas.map-ascii")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Techniek College Rotterdam/i }));
     expect(mapMocks.map.setMaxZoom).toHaveBeenLastCalledWith(19);
@@ -98,5 +107,36 @@ describe("portfolio-kaart", () => {
     const cleanupCalls = mapMocks.map.remove.mock.calls.length;
     view.unmount();
     expect(mapMocks.map.remove).toHaveBeenCalledTimes(cleanupCalls + 1);
+  });
+
+  it("leest de namen uit de basiskaart en tekent ze als echte tekst", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(640);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(480);
+    mapMocks.map.queryRenderedFeatures.mockReturnValue([
+      {
+        layer: { id: "label_city" },
+        properties: { name: "Rotterdam" },
+        geometry: { type: "Point", coordinates: [4.48, 51.92] },
+      },
+    ] as never);
+
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    // The symbol layers stay visible so the query keeps reporting their geometry.
+    expect(mapMocks.map.setLayoutProperty).not.toHaveBeenCalled();
+
+    await act(async () => {
+      emit("render");
+      await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
+    });
+
+    expect(mapMocks.map.queryRenderedFeatures).toHaveBeenCalledWith({
+      layers: expect.arrayContaining(["label_city"]),
+    });
+
+    const labels = document.querySelectorAll(".map-label");
+    expect(labels).toHaveLength(1);
+    expect(labels[0].textContent).toBe("Rotterdam");
   });
 });
