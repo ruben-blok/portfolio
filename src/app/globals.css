@@ -1,0 +1,371 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f7f6f1;
+  --color-ink: #1a1917;
+  --color-soft: #57564e;
+  --color-rule: #dcdad0;
+  --color-forest: #1d4a3a;
+  --color-forest-deep: #14332a;
+
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, "Times New Roman", serif;
+  --font-body: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --text-display: clamp(2.75rem, 8.5vw, 5.5rem);
+  --text-display--line-height: 0.99;
+  --text-display--letter-spacing: -0.022em;
+
+  --text-section: clamp(1.875rem, 4vw, 2.75rem);
+  --text-section--line-height: 1.07;
+  --text-section--letter-spacing: -0.018em;
+
+  --text-title: clamp(1.5rem, 2.4vw, 1.875rem);
+  --text-title--line-height: 1.14;
+  --text-title--letter-spacing: -0.014em;
+
+  --text-lead: clamp(1.125rem, 1.4vw, 1.3125rem);
+  --text-lead--line-height: 1.55;
+
+  --text-copy: 1.0625rem;
+  --text-copy--line-height: 1.62;
+
+  --text-note: 0.9375rem;
+  --text-note--line-height: 1.5;
+
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.45;
+
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-copy);
+    font-weight: 400;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis-weight: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-forest) 16%, var(--color-paper));
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-forest);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .shell {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .shell {
+      padding-inline: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .shell {
+      padding-inline: 3rem;
+    }
+  }
+
+  .prose-column {
+    max-width: 62ch;
+  }
+
+  .portfolio-map {
+    min-width: 0;
+  }
+
+  .map-frame {
+    position: relative;
+    height: 22rem;
+    overflow: hidden;
+    border-block: 1px solid var(--color-rule);
+    background: #e8e8df;
+  }
+
+  .map-frame::after {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background-image:
+      linear-gradient(color-mix(in oklab, var(--color-forest) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--color-forest) 6%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 2.25rem 2.25rem;
+    content: "";
+    pointer-events: none;
+  }
+
+  .map-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-canvas:focus-within {
+    outline: 2px solid var(--color-forest);
+    outline-offset: -4px;
+  }
+
+  .map-status {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    background: color-mix(in oklab, var(--color-paper) 92%, transparent);
+    color: var(--color-soft);
+    font-size: var(--text-note);
+    text-align: center;
+  }
+
+  .map-readout {
+    position: absolute;
+    inset-block-start: 0.75rem;
+    inset-inline: 0.75rem;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    color: var(--color-forest-deep);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+
+  .map-readout span {
+    padding: 0.15rem 0.3rem;
+    background: color-mix(in oklab, var(--color-paper) 88%, transparent);
+  }
+
+  .map-marker {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.45rem;
+    border: 0;
+    background: transparent;
+    color: var(--color-forest-deep);
+    cursor: pointer;
+  }
+
+  .map-marker > span:last-child {
+    display: none;
+    padding: 0.25rem 0.4rem;
+    background: color-mix(in oklab, var(--color-paper) 94%, transparent);
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 650;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .map-marker-labelled > span:last-child {
+    display: inline-block;
+  }
+
+  .map-marker-approximate > span:first-child {
+    font-size: 1.35rem;
+    opacity: 0.72;
+  }
+
+  .map-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 1rem;
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--color-rule);
+    color: var(--color-soft);
+    font-size: var(--text-label);
+  }
+
+  .map-controls button,
+  .map-fallback-links a {
+    min-height: 2.75rem;
+    text-decoration-line: underline;
+    text-decoration-color: var(--color-rule);
+    text-underline-offset: 0.3rem;
+  }
+
+  .map-controls button:hover:not(:disabled),
+  .map-fallback-links a:hover {
+    color: var(--color-forest);
+    text-decoration-color: var(--color-forest);
+  }
+
+  .map-controls button:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+
+  .map-controls output {
+    min-width: 2.5rem;
+    color: var(--color-ink);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  .map-poi-list {
+    display: grid;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .map-poi-list button {
+    display: grid;
+    min-height: 3.75rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--color-rule);
+    text-align: start;
+  }
+
+  .map-poi-list button:last-child {
+    border-bottom: 0;
+  }
+
+  .map-poi-list button[aria-pressed="true"] {
+    color: var(--color-forest);
+  }
+
+  .map-poi-list button span:first-child {
+    font-weight: 650;
+  }
+
+  .map-poi-list button span:last-child {
+    color: var(--color-soft);
+    font-size: var(--text-label);
+  }
+
+  .map-prompt,
+  .poi-detail,
+  .map-fallback-links {
+    padding-block: 1.25rem;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .map-prompt {
+    color: var(--color-soft);
+    font-size: var(--text-note);
+  }
+
+  .map-fallback-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    font-size: var(--text-note);
+  }
+
+  .maplibregl-ctrl-attrib {
+    max-width: calc(100% - 1rem);
+    background: color-mix(in oklab, var(--color-paper) 94%, transparent);
+    color: var(--color-soft);
+    font-family: var(--font-body);
+    font-size: 0.625rem;
+  }
+
+  .maplibregl-ctrl-attrib.compact {
+    min-height: 0;
+  }
+
+  .maplibregl-ctrl-attrib a {
+    color: var(--color-forest-deep);
+  }
+
+  @media (min-width: 768px) {
+    .map-frame {
+      height: 28rem;
+    }
+
+    .map-poi-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .map-poi-list button {
+      padding-inline: 1rem;
+      border-inline-end: 1px solid var(--color-rule);
+    }
+
+    .map-poi-list button:last-child {
+      border-inline-end: 0;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .map-frame {
+      height: 34rem;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 1.375rem, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .rise {
+    animation: rise 720ms var(--ease-settle) both;
+  }
+
+  .rise-1 {
+    animation-delay: 40ms;
+  }
+
+  .rise-2 {
+    animation-delay: 140ms;
+  }
+
+  .rise-3 {
+    animation-delay: 230ms;
+  }
+
+  .rise-4 {
+    animation-delay: 310ms;
+  }
+
+  .rule-wipe {
+    transition: transform 380ms var(--ease-settle);
+  }
+}
