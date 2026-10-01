@@ -1,3 +1,5 @@
+"use client";
+
 import { PortfolioMap } from "@/components/portfolio-map";
 import { pointsOfInterest } from "@/data/points-of-interest";
 import { profile } from "@/data/profile";
@@ -6,8 +8,8 @@ import { projects } from "@/data/projects";
 export function Hero() {
   return (
     <section id="top" aria-labelledby="top-titel" className="shell hero-globe">
-      <div className="grid grid-cols-1 gap-y-12 pt-14 pb-[4.5rem] md:grid-cols-12 md:gap-x-8 md:pt-20 md:pb-24 lg:pt-24">
-        <div className="md:col-span-5 lg:col-span-4">
+      <div className="hero-grid grid grid-cols-1 gap-y-12 pt-14 pb-[4.5rem] md:grid-cols-12 md:gap-x-8 md:pt-20 md:pb-24 lg:pt-24">
+        <div className="hero-copy md:col-span-5 lg:col-span-4">
           <p className="rise rise-1 font-display text-label text-soft italic">{profile.role}</p>
           <h1
             id="top-titel"
@@ -33,7 +35,7 @@ export function Hero() {
             </a>
           </div>
         </div>
-        <div className="rise rise-3 md:col-span-7 lg:col-span-8">
+        <div className="hero-map md:col-span-7 lg:col-span-8">
           <PortfolioMap points={pointsOfInterest} projects={projects} />
         </div>
       </div>

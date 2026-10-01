@@ -52,6 +52,8 @@
     font-size: var(--text-copy);
     font-weight: 400;
     line-height: 1.62;
+    /* The hero map breaks out of the shell to the full viewport width. */
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-synthesis-weight: none;
@@ -101,16 +103,83 @@
     max-width: 62ch;
   }
 
+  /*
+   * The map is the hero background at every zoom: its frame spans the whole section
+   * and the globe is positioned inside it with the camera, over the right-hand column.
+   * Because there is no layout change between world scale and street level, zooming is
+   * seamless. The grid content (copy, location list, detail) is layered above it.
+   */
+  .hero-globe {
+    position: relative;
+  }
+
+  .hero-grid {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The map column holds only the location list and detail; the frame itself is
+     absolutely positioned against .hero-globe, so this element must stay static. */
+  .hero-map {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
   .portfolio-map {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .map-frame {
-    position: relative;
-    height: 22rem;
+    position: absolute;
+    inset-block: 0;
+    /*
+     * Full viewport width: 50% of the centered shell minus 50vw breaks the frame out
+     * of the shell on both sides. The body clips horizontal overflow, since 100vw can
+     * exceed the client width by the scrollbar.
+     */
+    inset-inline: calc(50% - 50vw);
+    /* Own stacking context: without it the ASCII canvas (z-index 1 inside the
+       frame) would join the hero stacking context and paint over the static
+       location list, which has no z-index of its own. */
+    z-index: 0;
     overflow: hidden;
-    border-block: 1px solid var(--color-rule);
     background: #e8e8df;
+  }
+
+  .hero-copy {
+    position: relative;
+    z-index: 2;
+  }
+
+  /*
+   * The scrim fades out towards the map so the copy reads as a panel that dissolves
+   * into the ASCII rather than as a second column. Over the empty map paper it is
+   * invisible; it only earns its keep once the globe detail sits behind the text.
+   */
+  .hero-copy::before {
+    position: absolute;
+    inset: -2rem -3rem -2rem -2rem;
+    z-index: -1;
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-paper) 88%, transparent) 0%,
+      color-mix(in oklab, var(--color-paper) 84%, transparent) 62%,
+      transparent 100%
+    );
+    backdrop-filter: blur(1.5px);
+    content: "";
+  }
+
+  /* The location list and detail sit over the map and stay legible on top of it. */
+  .map-poi-list,
+  .poi-detail,
+  .map-prompt,
+  .map-fallback-links {
+    background: color-mix(in oklab, var(--color-paper) 86%, transparent);
+    backdrop-filter: blur(2px);
   }
 
   .map-canvas {
@@ -181,25 +250,6 @@
     text-align: center;
   }
 
-  .map-readout {
-    position: absolute;
-    inset-block-start: 0.75rem;
-    inset-inline: 0.75rem;
-    z-index: 2;
-    display: flex;
-    justify-content: space-between;
-    color: var(--color-forest-deep);
-    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-    font-size: 0.6875rem;
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
-  }
-
-  .map-readout span {
-    padding: 0.15rem 0.3rem;
-    background: color-mix(in oklab, var(--color-paper) 88%, transparent);
-  }
-
   .map-marker {
     display: flex;
     min-height: 2.75rem;
@@ -231,18 +281,6 @@
     opacity: 0.72;
   }
 
-  .map-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.25rem 1rem;
-    padding-block: 0.75rem;
-    border-bottom: 1px solid var(--color-rule);
-    color: var(--color-soft);
-    font-size: var(--text-label);
-  }
-
-  .map-controls button,
   .map-fallback-links a {
     min-height: 2.75rem;
     text-decoration-line: underline;
@@ -250,23 +288,9 @@
     text-underline-offset: 0.3rem;
   }
 
-  .map-controls button:hover:not(:disabled),
   .map-fallback-links a:hover {
     color: var(--color-forest);
     text-decoration-color: var(--color-forest);
-  }
-
-  .map-controls button:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-  }
-
-  .map-controls output {
-    min-width: 2.5rem;
-    color: var(--color-ink);
-    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-    font-variant-numeric: tabular-nums;
-    text-align: center;
   }
 
   .map-poi-list {
@@ -337,10 +361,6 @@
   }
 
   @media (min-width: 768px) {
-    .map-frame {
-      height: 28rem;
-    }
-
     .map-poi-list {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -352,12 +372,6 @@
 
     .map-poi-list button:last-child {
       border-inline-end: 0;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .map-frame {
-      height: 34rem;
     }
   }
 }

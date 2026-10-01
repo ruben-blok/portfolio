@@ -79,7 +79,6 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const [labels, setLabels] = useState<MapLabel[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [zoom, setZoom] = useState(1);
 
   const selectedPoint = points.find((point) => point.id === selectedId);
   const selectedProject = projects.find((project) => project.id === selectedPoint?.projectId);
@@ -97,18 +96,6 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   };
 
   selectPointRef.current = selectPoint;
-
-  const resetMap = () => {
-    setSelectedId(undefined);
-    const map = mapRef.current;
-    if (!map) return;
-
-    map.setMaxZoom(GENERAL_MAX_ZOOM);
-    const camera = worldCamera(window.matchMedia("(max-width: 767px)").matches);
-    const options = { ...camera, duration: reduceMotionRef.current ? 0 : 1600 };
-    if (reduceMotionRef.current) map.jumpTo(options);
-    else map.flyTo(options);
-  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -191,6 +178,37 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       });
     };
 
+    /**
+     * The map canvas always covers the whole viewport width, so the globe itself is
+     * positioned with the camera instead of the layout. Left padding shifts the
+     * camera centre into the middle of the map column — right of the copy, above the
+     * location list — which is where the globe belongs at world scale; zooming then
+     * grows it from that spot.
+     */
+    const centerGlobeOnMapColumn = (map: MapLibreMap) => {
+      const container = containerRef.current;
+      const column = container?.closest(".hero-map");
+      if (!container || !(column instanceof HTMLElement)) {
+        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+        return;
+      }
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+        return;
+      }
+      const canvasRect = container.getBoundingClientRect();
+      const columnRect = column.getBoundingClientRect();
+      const columnCentre = columnRect.left - canvasRect.left + columnRect.width / 2;
+      const list = container.closest(".hero-grid")?.querySelector(".portfolio-map");
+      map.setPadding({
+        top: 0,
+        right: 0,
+        bottom: list instanceof HTMLElement ? list.offsetHeight : 0,
+        // With left padding L the camera centres at (L + width) / 2, so L = 2C - width.
+        left: 2 * columnCentre - canvasRect.width,
+      });
+    };
+
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     reduceMotionRef.current = motionQuery.matches;
     const compact = window.matchMedia("(max-width: 767px)").matches;
@@ -221,7 +239,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         window.clearTimeout(timeout);
         map.setProjection({ type: "globe" });
         setStatus("ready");
-        setZoom(map.getZoom());
+        centerGlobeOnMapColumn(map);
 
         const measureCanvas = document.createElement("canvas");
         measureContextRef.current = measureCanvas.getContext("2d");
@@ -297,7 +315,6 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
 
       map.on("zoom", () => {
         labelsDirtyRef.current = true;
-        setZoom(map.getZoom());
       });
 
       map.on("move", () => {
@@ -307,9 +324,16 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       if (typeof ResizeObserver !== "undefined") {
         const observer = new ResizeObserver(() => {
           map.resize();
+          // Padding changes move the camera; re-centring mid-flight (a POI selection
+          // opens the detail panel, which resizes the list) would cancel that flight.
+          if (!map.isMoving()) centerGlobeOnMapColumn(map);
           labelsDirtyRef.current = true;
         });
+        // The location list sits inside the camera's padding box, so its height
+        // (which grows when a detail panel opens) moves the globe too.
         observer.observe(containerRef.current);
+        const list = containerRef.current?.closest(".hero-grid")?.querySelector(".portfolio-map");
+        if (list instanceof HTMLElement) observer.observe(list);
         resizeObserver = observer;
       }
     } catch {
@@ -329,8 +353,6 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       mapRef.current = null;
     };
   }, []);
-
-  const currentMaxZoom = selectedPoint?.maxZoom ?? GENERAL_MAX_ZOOM;
 
   return (
     <section className="portfolio-map" aria-label="Interactieve wereldkaart">
@@ -375,35 +397,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
             <p>De interactieve kaart kon niet laden. Kies hieronder een locatie.</p>
           </div>
         ) : null}
-        <div className="map-readout" aria-hidden="true">
-          <span>wereld / lokaal</span>
-          <span>zoom {zoom.toFixed(1)}</span>
-        </div>
       </div>
-
-      <fieldset className="map-controls">
-        <legend className="sr-only">Kaart bedienen</legend>
-        <button
-          type="button"
-          onClick={() => mapRef.current?.zoomOut({ duration: reduceMotionRef.current ? 0 : 250 })}
-          disabled={status !== "ready" || zoom <= 0}
-        >
-          Uitzoomen
-        </button>
-        <output aria-live="polite" aria-label="Zoomniveau">
-          {zoom.toFixed(1)}
-        </output>
-        <button
-          type="button"
-          onClick={() => mapRef.current?.zoomIn({ duration: reduceMotionRef.current ? 0 : 250 })}
-          disabled={status !== "ready" || zoom >= currentMaxZoom}
-        >
-          Inzoomen
-        </button>
-        <button type="button" onClick={resetMap} disabled={status !== "ready"}>
-          Wereldbeeld
-        </button>
-      </fieldset>
 
       <fieldset className="map-poi-list">
         <legend className="sr-only">Locaties op de kaart</legend>

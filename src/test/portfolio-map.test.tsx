@@ -24,6 +24,8 @@ const mapMocks = vi.hoisted(() => {
     })),
     getCanvas: vi.fn(() => document.createElement("canvas")),
     getZoom: vi.fn(() => 1.35),
+    isMoving: vi.fn(() => false),
+    setPadding: vi.fn(),
     setMaxZoom: vi.fn(),
     flyTo: vi.fn(),
     jumpTo: vi.fn(),
@@ -93,20 +95,62 @@ describe("portfolio-kaart", () => {
     expect(screen.getByText("Gehost op een VPS")).toBeInTheDocument();
   });
 
-  it("herstelt het wereldbeeld en ruimt de kaart op", async () => {
-    const user = userEvent.setup();
-    const view = render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
-    act(() => emit("styledata"));
-
-    await user.click(screen.getByRole("button", { name: "Wereldbeeld" }));
-    expect(mapMocks.map.setMaxZoom).toHaveBeenLastCalledWith(19);
-    expect(mapMocks.map.jumpTo).toHaveBeenCalledWith(
-      expect.objectContaining({ center: [7, 43], pitch: 0 }),
+  it("centreert de globe met de camera op de kaartkolom", () => {
+    const offsetHeightSpy = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(180);
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains("hero-map")) {
+          return { left: 459, width: 757 } as DOMRect;
+        }
+        if (this.classList.contains("map-canvas")) {
+          return { left: 0, width: 1280 } as DOMRect;
+        }
+        return { left: 0, width: 0 } as DOMRect;
+      });
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: !query.includes("max-width") && !query.includes("reduce"),
+        media: query,
+      })),
     );
 
-    const cleanupCalls = mapMocks.map.remove.mock.calls.length;
-    view.unmount();
-    expect(mapMocks.map.remove).toHaveBeenCalledTimes(cleanupCalls + 1);
+    const { container } = render(
+      <div className="hero-grid">
+        <div className="hero-copy" />
+        <div className="hero-map">
+          <PortfolioMap points={pointsOfInterest} projects={projects} />
+        </div>
+      </div>,
+    );
+    expect(container.querySelector(".hero-grid")).not.toBeNull();
+    act(() => emit("styledata"));
+
+    // Column centre = 459 - 0 + 757/2 = 837.5, so padding L = 2 * 837.5 - 1280 = 395.
+    expect(mapMocks.map.setPadding).toHaveBeenCalledWith({
+      top: 0,
+      right: 0,
+      bottom: 180,
+      left: 395,
+    });
+
+    offsetHeightSpy.mockRestore();
+    rectSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it("toont geen zoomknoppen of zoomcijfers meer", () => {
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    expect(screen.queryByRole("button", { name: /zoomen/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Wereldbeeld" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/wereld \/ lokaal/i)).not.toBeInTheDocument();
+    expect(document.querySelector(".map-readout")).not.toBeInTheDocument();
+    expect(document.querySelector(".map-controls")).not.toBeInTheDocument();
   });
 
   it("leest de namen uit de basiskaart en tekent ze als echte tekst", async () => {
