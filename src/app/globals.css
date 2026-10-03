@@ -196,6 +196,7 @@
     padding-block: 0.6rem;
     font-weight: 650;
     text-align: start;
+    cursor: pointer;
   }
 
   .map-poi-list button + button {
