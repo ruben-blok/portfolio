@@ -7,6 +7,7 @@ import {
   DEFAULT_TONE,
   luminance,
   toAsciiArt,
+  toneForZoom,
 } from "@/lib/ascii-map";
 
 const COLORS = { color: "#000000", background: "#ffffff" };
@@ -132,7 +133,7 @@ describe("ascii-kaart", () => {
     );
   });
 
-  it("laat het toonvenster met de lichtste pixel meegroeien", () => {
+  it("houdt het papier leeg en gebruikt het hoge uiteinde als ondergrens", () => {
     const surface = asciiSurface(600, 400, 1, COLORS);
     const sample = asciiSample(surface);
 
@@ -146,11 +147,86 @@ describe("ascii-kaart", () => {
       return toAsciiArt(pixels, sample, surface.columns, surface.rows, tone)[0][0];
     };
 
-    // With the window anchored to the frame, brighter frames stay lighter.
-    expect(ASCII_RAMP.indexOf(glyphFor(200))).toBeLessThan(ASCII_RAMP.indexOf(glyphFor(150)));
+    // A frame lighter than the given top end lifts the window, so its paper stays blank.
+    expect(ASCII_RAMP.indexOf(glyphFor(245, { low: 0.45, high: 0.95, gamma: 0.75 }))).toBe(0);
 
-    // A pinned window ignores the frame and saturates everything beyond it.
-    const pinned = { low: 0, high: 0.5, gamma: 1 };
-    expect(glyphFor(255, pinned)).toBe(glyphFor(200, pinned));
+    // A frame darker than that top end keeps the given value, so it takes ink.
+    expect(
+      ASCII_RAMP.indexOf(glyphFor(200, { low: 0.45, high: 0.95, gamma: 0.75 })),
+    ).toBeGreaterThan(0);
+  });
+
+  it("laat één witte cel het toonvenster niet naar beneden trekken", () => {
+    const surface = asciiSurface(600, 400, 1, COLORS);
+    const sample = asciiSample(surface);
+    const pixels = fill(new Uint8ClampedArray(sample.width * sample.height * 4), 242, 242, 242);
+    // A single blown-white cell, as a road casing produces, must not ink the paper around it.
+    paintBlock(pixels, sample, 0, 0, sample.sub, sample.height / surface.rows, 255, 255, 255);
+
+    const art = toAsciiArt(pixels, sample, surface.columns, surface.rows, toneForZoom(16.5));
+
+    expect(art[surface.rows - 1].trim()).toBe("");
+    expect(ASCII_RAMP.indexOf(art[0][0])).toBe(0);
+  });
+
+  it("maakt gebouwvlakken op straatzoom zichtbaar tegen leeg papier", () => {
+    const surface = asciiSurface(600, 400, 1, COLORS);
+    const sample = asciiSample(surface);
+    // Pale paper with a band of building grey on the upper half.
+    const pixels = fill(new Uint8ClampedArray(sample.width * sample.height * 4), 242, 242, 242);
+    paintBlock(pixels, sample, 0, 0, sample.width, Math.floor(sample.height / 2), 200, 200, 200);
+
+    const art = toAsciiArt(pixels, sample, surface.columns, surface.rows, toneForZoom(16.5));
+    const paper = ASCII_RAMP.indexOf(art[surface.rows - 1][0]);
+    const buildings = ASCII_RAMP.indexOf(art[0][0]);
+
+    expect(paper).toBe(0);
+    expect(buildings).toBeGreaterThanOrEqual(3);
+  });
+
+  it("houdt het wereldbeeld op hetzelfde toonvenster als voorheen", () => {
+    expect(toneForZoom(1.35).low).toBe(0.45);
+    expect(toneForZoom(0).low).toBe(0.45);
+  });
+
+  it("schuift op straatzoom naar het papier en stopt daarna", () => {
+    expect(toneForZoom(13).low).toBe(0.73);
+    expect(toneForZoom(13).high).toBe(0.95);
+    expect(toneForZoom(19).low).toBe(0.73);
+  });
+
+  it("laat het toonvenster monotoon naar het papier schuiven", () => {
+    expect(toneForZoom(9).low).toBeGreaterThan(toneForZoom(6).low);
+    expect(toneForZoom(9).low).toBeLessThan(toneForZoom(13).low);
+  });
+
+  it("leest een straatframe met het hoge uiteinde als papier en zet donkere cellen dik in", () => {
+    const surface = asciiSurface(600, 400, 1, COLORS);
+    const sample = asciiSample(surface);
+    const tone = toneForZoom(13);
+    const paperGrey = Math.round(tone.high * 255);
+
+    // Every cell sits on the high end of the street window, so the frame stays blank.
+    const paper = fill(
+      new Uint8ClampedArray(sample.width * sample.height * 4),
+      paperGrey,
+      paperGrey,
+      paperGrey,
+    );
+    const blank = toAsciiArt(paper, sample, surface.columns, surface.rows, tone);
+
+    expect(blank.every((line) => line === " ".repeat(surface.columns))).toBe(true);
+
+    // A single darker cell inside the frame must still take a dense glyph.
+    const inked = fill(
+      new Uint8ClampedArray(sample.width * sample.height * 4),
+      paperGrey,
+      paperGrey,
+      paperGrey,
+    );
+    paintBlock(inked, sample, 0, 0, sample.sub, sample.sub, 120, 120, 120);
+    const art = toAsciiArt(inked, sample, surface.columns, surface.rows, tone);
+
+    expect(ASCII_RAMP.indexOf(art[0][0])).toBeGreaterThanOrEqual(ASCII_RAMP.indexOf("#"));
   });
 });

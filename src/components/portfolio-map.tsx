@@ -15,12 +15,12 @@ import {
   type AsciiSample,
   asciiSample,
   asciiSurface,
-  DEFAULT_TONE,
   drawAsciiArt,
   toAsciiArt,
+  toneForZoom,
 } from "@/lib/ascii-map";
 import {
-  circlePolygon,
+  circleRadiusPixels,
   GENERAL_MAX_ZOOM,
   openStreetMapUrl,
   pointCamera,
@@ -64,10 +64,37 @@ function readFrame(source: HTMLCanvasElement, sample: AsciiSample) {
   return context.getImageData(0, 0, sample.width, sample.height).data;
 }
 
+/**
+ * Silences the basemap's own text and icons: the glyphs are drawn into the frame the
+ * ASCII pass samples, where they collapse into dense "@" runs. Paint only — the layers
+ * stay visible so `queryRenderedFeatures` keeps reporting the geometry `refreshLabels`
+ * needs; hiding them would also drop their tiles and their query results. The transition
+ * is zeroed so no ink fades through on the first frames.
+ */
+function silenceBasemapSymbols(map: MapLibreMap) {
+  // Transition names are valid at runtime but absent from the paint property type.
+  const setPaint = map.setPaintProperty.bind(map) as (
+    layerId: string,
+    name: string,
+    value: unknown,
+  ) => void;
+
+  for (const layer of map.getStyle().layers) {
+    if (layer.type !== "symbol") continue;
+    for (const property of ["text-opacity", "icon-opacity"]) {
+      setPaint(layer.id, `${property}-transition`, { duration: 0, delay: 0 });
+      setPaint(layer.id, property, 0);
+    }
+  }
+}
+
 export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const approximateCirclesRef = useRef<
+    { element: HTMLElement; radiusKm: number; latitude: number }[]
+  >([]);
   const pointsRef = useRef(points);
   const reduceMotionRef = useRef(false);
   const selectPointRef = useRef<(point: PointOfInterest) => void>(() => undefined);
@@ -134,7 +161,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         sample,
         surface.columns,
         surface.rows,
-        DEFAULT_TONE,
+        toneForZoom(map.getZoom()),
       );
 
       drawAsciiArt(context, art, surface);
@@ -238,43 +265,30 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         didInitialize = true;
         window.clearTimeout(timeout);
         map.setProjection({ type: "globe" });
+        silenceBasemapSymbols(map);
         setStatus("ready");
         centerGlobeOnMapColumn(map);
 
         const measureCanvas = document.createElement("canvas");
         measureContextRef.current = measureCanvas.getContext("2d");
 
-        const approximatePoints = pointsRef.current.filter(
-          (point) => point.precision === "approximate",
-        );
-        map.addSource("approximate-pois", {
-          type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: approximatePoints.map((point) => ({
-              ...circlePolygon(point.center, point.radiusKm),
-              properties: { id: point.id },
-            })),
-          },
-        });
-        map.addLayer({
-          id: "approximate-poi-fill",
-          type: "fill",
-          source: "approximate-pois",
-          paint: { "fill-color": "#1d4a3a", "fill-opacity": 0.12 },
-        });
-        map.addLayer({
-          id: "approximate-poi-outline",
-          type: "line",
-          source: "approximate-pois",
-          paint: {
-            "line-color": "#1d4a3a",
-            "line-width": 2,
-            "line-dasharray": [2, 2],
-          },
-        });
-
         for (const point of pointsRef.current) {
+          if (point.precision === "approximate") {
+            const circle = document.createElement("div");
+            circle.className = "map-poi-circle";
+            circle.setAttribute("aria-hidden", "true");
+            approximateCirclesRef.current.push({
+              element: circle,
+              radiusKm: point.radiusKm,
+              latitude: point.center[1],
+            });
+            markersRef.current.push(
+              new MapLibreMarker({ element: circle, anchor: "center" })
+                .setLngLat(pointPosition(point))
+                .addTo(map),
+            );
+          }
+
           const marker = document.createElement("button");
           marker.type = "button";
           marker.className = `map-marker map-marker-${point.precision}`;
@@ -288,15 +302,32 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
           );
         }
 
-        const updateMarkerLabels = () => {
+        /**
+         * Labels appear once the view is close enough, and the approximate circles follow
+         * the zoom: an area wider than the map has no boundary left to draw, so the circle
+         * is dropped instead of drawn at a reduced size that would sit in the wrong place.
+         */
+        const updateMarkerScale = () => {
           const showLabels = map.getZoom() >= MARKER_LABEL_ZOOM;
           for (const marker of markersRef.current) {
             marker.getElement().classList.toggle("map-marker-labelled", showLabels);
           }
+
+          const container = containerRef.current;
+          const cap = container ? Math.max(container.clientWidth, container.clientHeight) : 0;
+          for (const circle of approximateCirclesRef.current) {
+            const diameter =
+              circleRadiusPixels(circle.radiusKm, circle.latitude, map.getZoom()) * 2;
+            const offScale = cap > 0 && diameter > cap;
+            circle.element.style.display = offScale ? "none" : "";
+            if (offScale) continue;
+            circle.element.style.width = `${diameter}px`;
+            circle.element.style.height = `${diameter}px`;
+          }
         };
 
-        updateMarkerLabels();
-        map.on("zoom", updateMarkerLabels);
+        updateMarkerScale();
+        map.on("zoom", updateMarkerScale);
       });
 
       /**
@@ -349,6 +380,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       resizeObserver?.disconnect();
       for (const marker of markersRef.current) marker.remove();
       markersRef.current = [];
+      approximateCirclesRef.current = [];
       map.remove();
       mapRef.current = null;
     };
@@ -399,26 +431,27 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         ) : null}
       </div>
 
-      <fieldset className="map-poi-list">
-        <legend className="sr-only">Locaties op de kaart</legend>
-        {points.map((point) => (
-          <button
-            key={point.id}
-            type="button"
-            aria-pressed={selectedId === point.id}
-            onClick={() => selectPoint(point)}
-          >
-            <span>{point.label}</span>
-            <span>{point.precision === "exact" ? point.address : point.location}</span>
-          </button>
-        ))}
-      </fieldset>
+      <div className="map-panel">
+        <fieldset className="map-poi-list">
+          <legend className="sr-only">Locaties op de kaart</legend>
+          {points.map((point) => (
+            <button
+              key={point.id}
+              type="button"
+              aria-pressed={selectedId === point.id}
+              onClick={() => selectPoint(point)}
+            >
+              {point.label}
+            </button>
+          ))}
+        </fieldset>
 
-      {selectedPoint ? (
-        <PoiDetail point={selectedPoint} project={selectedProject} />
-      ) : (
-        <p className="map-prompt">Kies een locatie om van wereldschaal naar detail te gaan.</p>
-      )}
+        {selectedPoint ? (
+          <PoiDetail point={selectedPoint} project={selectedProject} />
+        ) : (
+          <p className="map-prompt">Kies een locatie om van wereldschaal naar detail te gaan.</p>
+        )}
+      </div>
 
       {status === "error" ? (
         <div className="map-fallback-links">

@@ -1,6 +1,7 @@
 export type Project = {
   id: string;
   title: string;
+  tagline: string;
   summary: string;
   stack: string[];
   href?: string;
@@ -11,6 +12,7 @@ export const projects: Project[] = [
   {
     id: "urbexium",
     title: "Urbexium",
+    tagline: "Een platform waar mensen verlaten locaties bekijken, delen en ontdekken.",
     summary:
       "Een platform waar mensen verlaten locaties bekijken, delen en ontdekken. AI en machine learning helpen gebruikers om plekken te vinden die ze anders nooit hadden gevonden.",
     stack: ["Python", "JavaScript"],
@@ -20,6 +22,7 @@ export const projects: Project[] = [
   {
     id: "urbexbench",
     title: "UrbexBench",
+    tagline: "Benchmark voor het herkennen van verlaten locaties op satellietbeelden.",
     summary:
       "Een benchmark die meet hoe goed visuele taalmodellen verlaten en niet-verlaten locaties op satellietbeelden van elkaar onderscheiden. Het combineert data-analyse met een praktische evaluatie van modelkwaliteit.",
     stack: ["Python"],
@@ -29,6 +32,7 @@ export const projects: Project[] = [
   {
     id: "escape-room",
     title: "Escape room",
+    tagline: "Interactieve escape room in de browser: puzzels en logica in een verlaten huis.",
     summary:
       "Een interactieve escape room in de browser: een verlaten huis, puzzels en logica die spelers verder brengen. De nadruk lag op spelstructuur en een duidelijke gebruikersflow.",
     stack: ["JavaScript", "PHP"],
@@ -38,6 +42,7 @@ export const projects: Project[] = [
   {
     id: "ouderavond",
     title: "Ouderavond",
+    tagline: "Een informatieve website voor ouders van nieuwe leerlingen.",
     summary:
       "Een informatieve website voor ouders van nieuwe leerlingen, met de nadruk op rustige presentatie en een structuur die snel te scannen is.",
     stack: ["HTML", "CSS"],

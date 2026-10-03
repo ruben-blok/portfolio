@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { projects } from "@/data/projects";
 
 describe("projectgegevens", () => {
-  it("geeft elk project een titel, samenvatting en stack", () => {
+  it("geeft elk project een titel, tagline, samenvatting en stack", () => {
     for (const project of projects) {
       expect(project.title.trim(), project.id).not.toBe("");
+      expect(project.tagline.trim(), project.id).not.toBe("");
       expect(project.summary.trim(), project.id).not.toBe("");
       expect(project.stack.length, project.id).toBeGreaterThan(0);
     }

@@ -173,13 +173,58 @@
     content: "";
   }
 
-  /* The location list and detail sit over the map and stay legible on top of it. */
-  .map-poi-list,
-  .poi-detail,
-  .map-prompt,
-  .map-fallback-links {
+  /*
+   * The panel under the map is one sheet: the location list and the detail of the
+   * selected location share a single translucent surface over the ASCII art.
+   */
+  .map-panel {
+    display: grid;
+    border-bottom: 1px solid var(--color-rule);
     background: color-mix(in oklab, var(--color-paper) 86%, transparent);
     backdrop-filter: blur(2px);
+  }
+
+  .map-poi-list {
+    display: grid;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .map-poi-list button {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    padding-block: 0.6rem;
+    font-weight: 650;
+    text-align: start;
+  }
+
+  .map-poi-list button + button {
+    border-top: 1px solid var(--color-rule);
+  }
+
+  .map-poi-list button[aria-pressed="true"] {
+    color: var(--color-forest);
+  }
+
+  .map-prompt,
+  .poi-detail {
+    padding-block: 1rem;
+  }
+
+  .map-prompt {
+    color: var(--color-soft);
+    font-size: var(--text-note);
+  }
+
+  .map-fallback-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding-block: 1.25rem;
+    border-bottom: 1px solid var(--color-rule);
+    background: color-mix(in oklab, var(--color-paper) 86%, transparent);
+    backdrop-filter: blur(2px);
+    font-size: var(--text-note);
   }
 
   .map-canvas {
@@ -219,6 +264,19 @@
 
   .map-canvas :is(.maplibregl-marker, .maplibregl-popup) {
     z-index: 3;
+  }
+
+  /*
+   * Approximate locations are drawn as UI over the ASCII art: a MapLibre marker keeps the
+   * circle on the globe (and fades it when the globe turns it away), so it reads as an
+   * annotation instead of as part of the map's line work.
+   */
+  .map-canvas .maplibregl-marker.map-poi-circle {
+    z-index: 2;
+    border: 2px dashed var(--color-forest);
+    border-radius: 50%;
+    background: color-mix(in oklab, var(--color-forest) 12%, transparent);
+    pointer-events: none;
   }
 
   .map-label {
@@ -293,57 +351,6 @@
     text-decoration-color: var(--color-forest);
   }
 
-  .map-poi-list {
-    display: grid;
-    border-bottom: 1px solid var(--color-rule);
-  }
-
-  .map-poi-list button {
-    display: grid;
-    min-height: 3.75rem;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.15rem;
-    padding-block: 0.75rem;
-    border-bottom: 1px solid var(--color-rule);
-    text-align: start;
-  }
-
-  .map-poi-list button:last-child {
-    border-bottom: 0;
-  }
-
-  .map-poi-list button[aria-pressed="true"] {
-    color: var(--color-forest);
-  }
-
-  .map-poi-list button span:first-child {
-    font-weight: 650;
-  }
-
-  .map-poi-list button span:last-child {
-    color: var(--color-soft);
-    font-size: var(--text-label);
-  }
-
-  .map-prompt,
-  .poi-detail,
-  .map-fallback-links {
-    padding-block: 1.25rem;
-    border-bottom: 1px solid var(--color-rule);
-  }
-
-  .map-prompt {
-    color: var(--color-soft);
-    font-size: var(--text-note);
-  }
-
-  .map-fallback-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1.5rem;
-    font-size: var(--text-note);
-  }
-
   .maplibregl-ctrl-attrib {
     max-width: calc(100% - 1rem);
     background: color-mix(in oklab, var(--color-paper) 94%, transparent);
@@ -367,11 +374,37 @@
 
     .map-poi-list button {
       padding-inline: 1rem;
+    }
+
+    .map-poi-list button + button {
+      border-top: 0;
+      border-inline-start: 1px solid var(--color-rule);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .map-panel {
+      grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+    }
+
+    .map-poi-list {
+      grid-template-columns: minmax(0, 1fr);
+      border-bottom: 0;
       border-inline-end: 1px solid var(--color-rule);
     }
 
-    .map-poi-list button:last-child {
-      border-inline-end: 0;
+    .map-poi-list button {
+      padding-inline: 1rem 1.25rem;
+    }
+
+    .map-poi-list button + button {
+      border-inline-start: 0;
+      border-top: 1px solid var(--color-rule);
+    }
+
+    .poi-detail,
+    .map-prompt {
+      padding-inline-start: 1.75rem;
     }
   }
 }

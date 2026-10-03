@@ -15,11 +15,15 @@ const CELL_ASPECT = 2;
 /** Sub-samples read per character cell horizontally; vertically this is doubled. */
 const SUB_SAMPLES = 3;
 const REFERENCE_FONT_SIZE = 100;
+/** Share of the opaque frame that has to sit below the window's light end. */
+const PAPER_QUANTILE = 0.9;
+/** Resolution of the histogram that finds that light end. */
+const TONE_BINS = 64;
 
 export type AsciiTone = {
-  /** Luminance treated as "no ink". */
+  /** Luminance mapped to a full glyph; everything at or below it is solid ink. */
   low: number;
-  /** Luminance treated as "full ink". */
+  /** Luminance mapped to a blank cell; everything at or above it stays paper. */
   high: number;
   /** Contrast curve applied to the normalized luminance. */
   gamma: number;
@@ -31,6 +35,18 @@ export type AsciiTone = {
  * downwards and `high` is left to `resolveTone`, which anchors it to the frame.
  */
 export const DEFAULT_TONE: AsciiTone = { low: 0.45, high: 0.97, gamma: 0.75 };
+
+/**
+ * Tone window per zoom level. A world view needs a wide window because its frame is
+ * pale paper plus near-black coastlines, while a street view only carries pale-grey
+ * line work and therefore needs a narrower window aimed higher, towards paper, so
+ * building outlines and roads stop collapsing into the same glyph. The low end runs
+ * from zoom 6 (world) to zoom 13 (street) and stays put beyond that.
+ */
+export function toneForZoom(zoom: number): AsciiTone {
+  const street = Math.min(1, Math.max(0, (zoom - 6) / 7));
+  return { low: 0.45 + street * 0.28, high: 0.95, gamma: 0.75 };
+}
 
 export type AsciiSurface = {
   /** Backing store size of the target canvas. */
@@ -145,7 +161,7 @@ export function toAsciiArt(
     }
   }
 
-  const resolved = resolveTone(cellLuminance, tone);
+  const resolved = resolveTone(cellLuminance, cellOpaque, tone);
   const span = resolved.high - resolved.low || 1;
   const art: string[] = [];
 
@@ -171,23 +187,49 @@ export function toAsciiArt(
 }
 
 /**
- * Picks the tone window from the frame itself. A world view is mostly pale land plus a
- * few near-black coastlines, while a street view is pale buildings crossed by grey
- * roads, so a fixed window either clips the globe or blanks the street map. Anchoring
- * the window to the observed luminance range keeps both readable.
+ * Light value that most of the frame shares: the paper the map is drawn on. It is read as a
+ * high quantile of the opaque cells rather than the single lightest one, because transparent
+ * space around the globe and blown-white road casings would otherwise lift the top of the
+ * window to pure white and ink every other cell.
  */
-function resolveTone(cellLuminance: Float32Array, tone?: Partial<AsciiTone>): AsciiTone {
-  const override = { ...DEFAULT_TONE, ...tone };
-  if (tone?.low !== undefined || tone?.high !== undefined) return override;
+function paperLevel(cellLuminance: Float32Array, cellOpaque: Uint8Array) {
+  const histogram = new Uint32Array(TONE_BINS);
+  let opaque = 0;
 
-  let lightest = 0;
-  for (const value of cellLuminance) {
-    if (value > lightest) lightest = value;
+  for (let cell = 0; cell < cellLuminance.length; cell += 1) {
+    if (!cellOpaque[cell]) continue;
+    opaque += 1;
+    histogram[Math.min(TONE_BINS - 1, Math.floor(cellLuminance[cell] * TONE_BINS))] += 1;
   }
+
+  if (opaque === 0) return 1;
+
+  const target = opaque * PAPER_QUANTILE;
+  let seen = 0;
+
+  for (let bin = 0; bin < TONE_BINS; bin += 1) {
+    seen += histogram[bin];
+    if (seen >= target) return (bin + 1) / TONE_BINS;
+  }
+
+  return 1;
+}
+
+/**
+ * Picks the tone window from the frame itself. `low` is the caller's; `high` is this frame's
+ * paper level, so the paper stays blank at every zoom while everything darker spreads over
+ * the rest of the ramp. The caller's `high` acts as a floor for frames without a light end.
+ */
+function resolveTone(
+  cellLuminance: Float32Array,
+  cellOpaque: Uint8Array,
+  tone?: Partial<AsciiTone>,
+): AsciiTone {
+  const override = { ...DEFAULT_TONE, ...tone };
 
   return {
     low: override.low,
-    high: Math.max(override.high, lightest),
+    high: Math.max(override.high, paperLevel(cellLuminance, cellOpaque)),
     gamma: override.gamma,
   };
 }

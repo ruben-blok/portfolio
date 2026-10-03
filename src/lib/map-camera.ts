@@ -36,28 +36,18 @@ export function isValidPosition(position: Position) {
   return longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90;
 }
 
-export function circlePolygon(center: Position, radiusKm: number, steps = 64) {
-  const [longitude, latitude] = center;
-  const latitudeRadius = radiusKm / 110.574;
-  const longitudeRadius = radiusKm / (111.32 * Math.cos((latitude * Math.PI) / 180));
-  const coordinates: Position[] = [];
+/**
+ * MapLibre's world is 512 pixels wide at zoom 0, so one pixel covers this many metres of the
+ * equator there (equator circumference divided by that world size). The 256-pixel variant of
+ * this number (`156543.03392`) would draw every ground circle at half its real size.
+ */
+const METERS_PER_PIXEL_AT_ZOOM_ZERO = 40075016.686 / 512;
 
-  for (let step = 0; step <= steps; step += 1) {
-    const angle = (step / steps) * Math.PI * 2;
-    coordinates.push([
-      longitude + Math.cos(angle) * longitudeRadius,
-      latitude + Math.sin(angle) * latitudeRadius,
-    ]);
-  }
-
-  return {
-    type: "Feature" as const,
-    properties: {},
-    geometry: {
-      type: "Polygon" as const,
-      coordinates: [coordinates],
-    },
-  };
+/** Screen radius in CSS pixels of a ground circle of `radiusKm` at `latitude` and `zoom`. */
+export function circleRadiusPixels(radiusKm: number, latitude: number, zoom: number) {
+  const metersPerPixel =
+    (METERS_PER_PIXEL_AT_ZOOM_ZERO * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
+  return (radiusKm * 1000) / metersPerPixel;
 }
 
 export function openStreetMapUrl(point: PointOfInterest) {

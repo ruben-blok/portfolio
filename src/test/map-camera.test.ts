@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pointsOfInterest } from "@/data/points-of-interest";
 import {
-  circlePolygon,
+  circleRadiusPixels,
   isValidPosition,
   openStreetMapUrl,
   pointCamera,
@@ -28,12 +28,9 @@ describe("kaartcamera", () => {
     expect(urbexium && pointCamera(urbexium).pitch).toBe(0);
   });
 
-  it("maakt een gesloten gebied voor globale locaties", () => {
-    const polygon = circlePolygon([6.7735, 51.2277], 25, 8);
-    const coordinates = polygon.geometry.coordinates[0];
-
-    expect(coordinates).toHaveLength(9);
-    expect(coordinates[0]).toEqual(coordinates.at(-1));
+  it("schaalt de schermstraal van een globale locatie mee met de zoom", () => {
+    expect(circleRadiusPixels(25, 51.2, 8.5)).toBeCloseTo(circleRadiusPixels(25, 51.2, 7.5) * 2, 6);
+    expect(circleRadiusPixels(25, 51.2277, 7.5)).toBeCloseTo(92.31, 1);
   });
 
   it("gebruikt alleen voor exacte locaties een OpenStreetMap-marker", () => {

@@ -7,6 +7,7 @@ import { projects } from "@/data/projects";
 
 const mapMocks = vi.hoisted(() => {
   const handlers = new Map<string, Array<(event?: { error?: Error }) => void>>();
+  const state: { container: HTMLElement | null } = { container: null };
   const map = {
     setProjection: vi.fn(),
     addControl: vi.fn(),
@@ -17,6 +18,13 @@ const mapMocks = vi.hoisted(() => {
     addLayer: vi.fn(),
     getLayer: vi.fn((id: string) => (id.startsWith("label_") ? { id } : undefined)),
     setLayoutProperty: vi.fn(),
+    getStyle: vi.fn(() => ({
+      layers: [
+        { id: "water", type: "fill" },
+        { id: "label_city", type: "symbol" },
+      ],
+    })),
+    setPaintProperty: vi.fn(),
     queryRenderedFeatures: vi.fn(() => []),
     project: vi.fn((position: [number, number]) => ({
       x: 40 + position[0] * 4,
@@ -39,13 +47,21 @@ const mapMocks = vi.hoisted(() => {
   return {
     handlers,
     map,
-    Map: vi.fn(() => map),
-    Marker: vi.fn(() => ({
-      setLngLat: vi.fn().mockReturnThis(),
-      addTo: vi.fn().mockReturnThis(),
-      getElement: vi.fn(() => document.createElement("button")),
-      remove: vi.fn(),
-    })),
+    state,
+    Map: vi.fn((options?: { container?: HTMLElement }) => {
+      state.container = options?.container ?? null;
+      return map;
+    }),
+    Marker: vi.fn((options?: { element?: HTMLElement }) => {
+      const element = options?.element ?? document.createElement("button");
+      state.container?.appendChild(element);
+      return {
+        setLngLat: vi.fn().mockReturnThis(),
+        addTo: vi.fn().mockReturnThis(),
+        getElement: vi.fn(() => element),
+        remove: vi.fn(),
+      };
+    }),
     AttributionControl: vi.fn(),
     setWorkerUrl: vi.fn(),
   };
@@ -80,14 +96,14 @@ describe("portfolio-kaart", () => {
     expect(screen.queryByText("Kaart wordt geladen…")).not.toBeInTheDocument();
     expect(document.querySelector("canvas.map-ascii")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Techniek College Rotterdam/i }));
+    await user.click(screen.getByRole("button", { name: "Techniek College Rotterdam" }));
     expect(mapMocks.map.setMaxZoom).toHaveBeenLastCalledWith(19);
     expect(mapMocks.map.jumpTo).toHaveBeenLastCalledWith(
       expect.objectContaining({ center: [4.3832053, 51.9239476], zoom: 16.5 }),
     );
-    expect(screen.getAllByText("Schiedamseweg 245, 3118 JB Schiedam")).toHaveLength(2);
+    expect(screen.getAllByText("Schiedamseweg 245, 3118 JB Schiedam")).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: /^Urbexium/i }));
+    await user.click(screen.getByRole("button", { name: "Urbexium" }));
     expect(mapMocks.map.setMaxZoom).toHaveBeenLastCalledWith(9);
     expect(mapMocks.map.jumpTo).toHaveBeenLastCalledWith(
       expect.objectContaining({ center: [6.7735, 51.2277], zoom: 7.5 }),
@@ -167,7 +183,8 @@ describe("portfolio-kaart", () => {
     render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
     act(() => emit("styledata"));
 
-    // The symbol layers stay visible so the query keeps reporting their geometry.
+    // The symbol layers stay visible and are silenced by paint opacity instead, so the
+    // query keeps reporting their geometry.
     expect(mapMocks.map.setLayoutProperty).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -182,5 +199,58 @@ describe("portfolio-kaart", () => {
     const labels = document.querySelectorAll(".map-label");
     expect(labels).toHaveLength(1);
     expect(labels[0].textContent).toBe("Rotterdam");
+  });
+
+  it("dempt de tekst en iconen van symboollagen zonder ze te verbergen", () => {
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    expect(mapMocks.map.setPaintProperty).toHaveBeenCalledWith("label_city", "text-opacity", 0);
+    expect(mapMocks.map.setPaintProperty).toHaveBeenCalledWith("label_city", "icon-opacity", 0);
+
+    for (const call of mapMocks.map.setPaintProperty.mock.calls) {
+      expect(call[0]).not.toBe("water");
+    }
+    expect(mapMocks.map.setLayoutProperty).not.toHaveBeenCalled();
+  });
+
+  it("tekent de globale cirkel als overlay die met de zoom meeschaalt", () => {
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    const circles = document.querySelectorAll(".map-poi-circle");
+    expect(circles).toHaveLength(1);
+
+    const exact = document.querySelector(".map-marker-exact");
+    expect(exact).not.toBeNull();
+    expect(exact).not.toHaveClass("map-poi-circle");
+    expect(circles[0]).not.toBe(exact);
+
+    const circle = circles[0] as HTMLElement;
+
+    mapMocks.map.getZoom.mockReturnValue(7.5);
+    act(() => emit("zoom"));
+    const near = Number.parseFloat(circle.style.width);
+
+    mapMocks.map.getZoom.mockReturnValue(8.5);
+    act(() => emit("zoom"));
+    const closer = Number.parseFloat(circle.style.width);
+
+    expect(near).toBeGreaterThan(0);
+    expect(closer).toBeCloseTo(near * 2, 6);
+
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(640);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(480);
+
+    mapMocks.map.getZoom.mockReturnValue(12);
+    act(() => emit("zoom"));
+    expect(circle.style.display).toBe("none");
+
+    mapMocks.map.getZoom.mockReturnValue(7.5);
+    act(() => emit("zoom"));
+    expect(circle.style.display).not.toBe("none");
+
+    mapMocks.map.getZoom.mockReturnValue(1.35);
+    vi.restoreAllMocks();
   });
 });
