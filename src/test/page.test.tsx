@@ -73,6 +73,14 @@ describe("portfolio pagina", () => {
     }
   });
 
+  it("geeft elke projectrij een anker voor de kaartlinks", () => {
+    render(<Home />);
+
+    for (const project of projects) {
+      expect(document.getElementById(`project-${project.id}`), project.id).not.toBeNull();
+    }
+  });
+
   it("laat elke navigatielink naar een bestaande sectie wijzen", () => {
     render(
       <>

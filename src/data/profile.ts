@@ -15,7 +15,7 @@ export const profile = {
   location: "Rotterdam",
   headline: "Ik bouw webapplicaties van database tot interface.",
   intro:
-    "Ik ben Ruben, student Software Development aan het Techniek College Rotterdam. Ik werk graag aan projecten die iets ontsluiten wat anders verborgen blijft: verlaten locaties, satellietbeelden, informatie die mensen nodig hebben. Liever duidelijke code dan slimme code.",
+    "Ik ben Ruben, student Software Development in Rotterdam. Ik bouw graag applicaties die iets ontsluiten wat anders verborgen blijft: liever duidelijke code dan slimme code.",
   email: "ruben.blok36@gmail.com",
 } as const;
 

@@ -161,7 +161,7 @@
    */
   .hero-copy::before {
     position: absolute;
-    inset: -2rem -3rem -2rem -2rem;
+    inset: -2rem -2rem -2rem -2rem;
     z-index: -1;
     background: linear-gradient(
       90deg,
@@ -319,6 +319,15 @@
     cursor: pointer;
   }
 
+  /*
+   * The marker is anchored by its left edge, so its symbol would sit half a glyph
+   * right of the projected point. Centre the symbol on the anchor instead, which is
+   * where the approximate circle is centred too.
+   */
+  .map-marker > span:first-child {
+    translate: -50% 0;
+  }
+
   .map-marker > span:last-child {
     display: none;
     padding: 0.25rem 0.4rem;
@@ -370,6 +379,11 @@
   @media (min-width: 768px) {
     .map-poi-list {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .poi-detail,
+    .map-prompt {
+      padding-inline-start: 1rem;
     }
 
     .map-poi-list button {

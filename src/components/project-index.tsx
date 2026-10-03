@@ -5,7 +5,10 @@ function ProjectRow({ project }: { project: Project }) {
   const isLinked = Boolean(project.href);
 
   return (
-    <li className={`relative border-b border-rule ${isLinked ? "group" : ""}`}>
+    <li
+      id={`project-${project.id}`}
+      className={`relative border-b border-rule ${isLinked ? "group" : ""}`}
+    >
       <div className="grid grid-cols-1 gap-y-4 py-8 md:grid-cols-12 md:gap-x-8 md:py-10">
         <div className="md:col-span-7">
           <h3 className="font-display text-title">{project.title}</h3>

@@ -102,6 +102,7 @@ describe("portfolio-kaart", () => {
       expect.objectContaining({ center: [4.3832053, 51.9239476], zoom: 16.5 }),
     );
     expect(screen.getAllByText("Schiedamseweg 245, 3118 JB Schiedam")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: /naar project/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Urbexium" }));
     expect(mapMocks.map.setMaxZoom).toHaveBeenLastCalledWith(9);
@@ -109,6 +110,10 @@ describe("portfolio-kaart", () => {
       expect.objectContaining({ center: [6.7735, 51.2277], zoom: 7.5 }),
     );
     expect(screen.getByText("Gehost op een VPS")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /naar project/i })).toHaveAttribute(
+      "href",
+      "#project-urbexium",
+    );
   });
 
   it("centreert de globe met de camera op de kaartkolom", () => {
