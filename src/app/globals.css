@@ -107,7 +107,12 @@
    * The map is the hero background at every zoom: its frame spans the whole section
    * and the globe is positioned inside it with the camera, over the right-hand column.
    * Because there is no layout change between world scale and street level, zooming is
-   * seamless. The grid content (copy, location list, detail) is layered above it.
+   * seamless. The ASCII layer is stacked above the copy, so the globe covers the copy
+   * as it grows; the location list and the detail stay above the ASCII art.
+   *
+   * Hero stacking order, bottom to top: the WebGL canvas (in flow order), the copy (1),
+   * the ASCII layer (2), the map labels (3), the POI circles (4) and markers (5), the
+   * map status and the attribution (6) and the panel (7).
    */
   .hero-globe {
     position: relative;
@@ -115,7 +120,6 @@
 
   .hero-grid {
     position: relative;
-    z-index: 1;
   }
 
   /* The map column holds only the location list and detail; the frame itself is
@@ -141,36 +145,44 @@
      * exceed the client width by the scrollbar.
      */
     inset-inline: calc(50% - 50vw);
-    /* Own stacking context: without it the ASCII canvas (z-index 1 inside the
-       frame) would join the hero stacking context and paint over the static
-       location list, which has no z-index of its own. */
-    z-index: 0;
+    /* No stacking context of its own: the ASCII layer inside it has to stack against
+       the hero copy, and the copy has to sit above this paper (a positioned element
+       with `z-index: auto` paints below every positive z-index) but below the ASCII. */
     overflow: hidden;
     background: #e8e8df;
   }
 
+  /* Below the ASCII layer, so a zoomed-in globe draws over the copy. */
   .hero-copy {
     position: relative;
-    z-index: 2;
+    z-index: 1;
   }
 
   /*
-   * The scrim fades out towards the map so the copy reads as a panel that dissolves
-   * into the ASCII rather than as a second column. Over the empty map paper it is
-   * invisible; it only earns its keep once the globe detail sits behind the text.
+   * Below the tablet breakpoint the hero is a single column with the copy above the
+   * map, so there is no left/right split for the copy to hide in: the frame drops back
+   * under the grid, which keeps the art, the labels and the markers below the copy
+   * exactly as on a page without the desktop stack, and the copy keeps the scrim that
+   * reads it over the globe.
    */
-  .hero-copy::before {
-    position: absolute;
-    inset: -2rem -2rem -2rem -2rem;
-    z-index: -1;
-    background: linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--color-paper) 88%, transparent) 0%,
-      color-mix(in oklab, var(--color-paper) 84%, transparent) 62%,
-      transparent 100%
-    );
-    backdrop-filter: blur(1.5px);
-    content: "";
+  @media (max-width: 767px) {
+    .map-frame {
+      z-index: 0;
+    }
+
+    .hero-copy::before {
+      position: absolute;
+      inset: -2rem -2rem -2rem -2rem;
+      z-index: -1;
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--color-paper) 88%, transparent) 0%,
+        color-mix(in oklab, var(--color-paper) 84%, transparent) 62%,
+        transparent 100%
+      );
+      backdrop-filter: blur(1.5px);
+      content: "";
+    }
   }
 
   /*
@@ -179,6 +191,9 @@
    */
   .map-panel {
     display: grid;
+    /* Above the hero ASCII layer: the panel is a sheet drawn over the art. */
+    position: relative;
+    z-index: 7;
     border-bottom: 1px solid var(--color-rule);
     background: color-mix(in oklab, var(--color-paper) 86%, transparent);
     backdrop-filter: blur(2px);
@@ -221,6 +236,9 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem 1.5rem;
+    /* Above the hero ASCII layer, like the panel. */
+    position: relative;
+    z-index: 7;
     padding-block: 1.25rem;
     border-bottom: 1px solid var(--color-rule);
     background: color-mix(in oklab, var(--color-paper) 86%, transparent);
@@ -246,7 +264,8 @@
   .map-ascii-layer {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    /* Above the hero copy so the drawn globe covers it. */
+    z-index: 2;
     pointer-events: none;
   }
 
@@ -259,12 +278,12 @@
   .map-labels {
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 3;
     pointer-events: none;
   }
 
   .map-canvas :is(.maplibregl-marker, .maplibregl-popup) {
-    z-index: 3;
+    z-index: 5;
   }
 
   /*
@@ -273,7 +292,7 @@
    * annotation instead of as part of the map's line work.
    */
   .map-canvas .maplibregl-marker.map-poi-circle {
-    z-index: 2;
+    z-index: 4;
     border: 2px dashed var(--color-forest);
     border-radius: 50%;
     background: color-mix(in oklab, var(--color-forest) 12%, transparent);
@@ -299,7 +318,7 @@
   .map-status {
     position: absolute;
     inset: 0;
-    z-index: 3;
+    z-index: 6;
     display: grid;
     place-items: center;
     padding: 2rem;
@@ -359,6 +378,12 @@
   .map-fallback-links a:hover {
     color: var(--color-forest);
     text-decoration-color: var(--color-forest);
+  }
+
+  /* The frame no longer forms a stacking context, so the corner containers have to be
+     lifted over the hero ASCII layer themselves. */
+  .map-canvas .maplibregl-ctrl-bottom-right {
+    z-index: 6;
   }
 
   .maplibregl-ctrl-attrib {

@@ -152,7 +152,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         canvas.height = surface.height;
       }
 
-      const context = canvas.getContext("2d", { alpha: false });
+      const context = canvas.getContext("2d");
       if (!context) return;
 
       const sample = asciiSample(surface);
@@ -165,6 +165,15 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       );
 
       drawAsciiArt(context, art, surface);
+
+      /*
+       * Keeps the painted sheet only where the frame carries map paint, so the space
+       * around the globe stays transparent and the hero copy behind it reads through.
+       * The paper is otherwise opaque, which is what hides the copy as the globe grows.
+       */
+      context.globalCompositeOperation = "destination-in";
+      context.drawImage(map.getCanvas(), 0, 0, surface.width, surface.height);
+      context.globalCompositeOperation = "source-over";
     };
 
     /**
