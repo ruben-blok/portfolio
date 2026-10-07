@@ -39,7 +39,7 @@ describe("points of interest", () => {
     }
 
     expect(urbexium?.precision).toBe("approximate");
-    expect(urbexium?.location).toBe("Duitsland");
+    expect(urbexium?.location).toBe("Germany");
     expect(urbexium?.relation).toBe("Gehost op een VPS");
     expect(urbexium?.maxZoom).toBeLessThanOrEqual(9);
     expect(JSON.stringify(urbexium)).not.toMatch(/strato/i);

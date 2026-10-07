@@ -18,7 +18,7 @@ export type MapLabel = {
 type LabelRule = {
   /** Style layer the names are read from. */
   layer: string;
-  /** Field used for the label text. */
+  /** Field used for the label text when the feature carries no English name. */
   field: string;
   /** Higher rank wins when two labels collide. */
   rank: number;
@@ -77,10 +77,22 @@ function featurePoints(geometry: LabelFeature["geometry"]): [number, number][] {
   return [];
 }
 
+/**
+ * The tiles carry the local name in `name` and the English translation in `name:en`
+ * (with the deprecated `name_en` as a second chance), so English is tried first and the
+ * local name stays as the fallback for features without a translation.
+ */
+const ENGLISH_NAME_FIELDS = ["name:en", "name_en"];
+
 export function labelText(feature: LabelFeature, field: string) {
-  const value = feature.properties?.[field];
-  if (typeof value !== "string") return "";
-  return value.trim();
+  for (const nameField of [...ENGLISH_NAME_FIELDS, field]) {
+    const value = feature.properties?.[nameField];
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+
+  return "";
 }
 
 export type LabelMetrics = {

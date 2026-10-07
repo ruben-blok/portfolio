@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AttributionControl,
   Map as MapLibreMap,
   Marker as MapLibreMarker,
   type Marker,
@@ -105,6 +104,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const labelsDirtyRef = useRef(true);
   const [labels, setLabels] = useState<MapLabel[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
+  const [atWorldView, setAtWorldView] = useState(true);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   const selectedPoint = points.find((point) => point.id === selectedId);
@@ -112,12 +112,31 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
 
   const selectPoint = (point: PointOfInterest) => {
     setSelectedId(point.id);
+    setAtWorldView(false);
     const map = mapRef.current;
     if (!map) return;
 
     map.setMaxZoom(point.maxZoom);
     const camera = pointCamera(point);
     const options = { ...camera, duration: reduceMotionRef.current ? 0 : 1800 };
+    if (reduceMotionRef.current) map.jumpTo(options);
+    else map.flyTo(options);
+  };
+
+  /**
+   * Returns the camera to the default world globe. Selecting a location lowers the
+   * maximum zoom to that location's detail level, so the reset restores the general
+   * limit as well as the camera.
+   */
+  const resetView = () => {
+    setSelectedId(undefined);
+    setAtWorldView(true);
+    const map = mapRef.current;
+    if (!map) return;
+
+    map.setMaxZoom(GENERAL_MAX_ZOOM);
+    const compact = window.matchMedia("(max-width: 767px)").matches;
+    const options = { ...worldCamera(compact), duration: reduceMotionRef.current ? 0 : 1800 };
     if (reduceMotionRef.current) map.jumpTo(options);
     else map.flyTo(options);
   };
@@ -245,6 +264,21 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       });
     };
 
+    /**
+     * The reset button only makes sense while the camera is away from the default world
+     * globe, so every settled move re-checks the camera against that starting view. The
+     * tolerance keeps floating point drift in zoom and centre from flickering the button.
+     */
+    const syncWorldView = (map: MapLibreMap) => {
+      const camera = worldCamera(compact);
+      const center = map.getCenter();
+      const atWorld =
+        Math.abs(map.getZoom() - camera.zoom) < 0.01 &&
+        Math.abs(center.lng - camera.center[0]) < 0.01 &&
+        Math.abs(center.lat - camera.center[1]) < 0.01;
+      setAtWorldView(atWorld);
+    };
+
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     reduceMotionRef.current = motionQuery.matches;
     const compact = window.matchMedia("(max-width: 767px)").matches;
@@ -265,8 +299,6 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         canvasContextAttributes: { preserveDrawingBuffer: true, antialias: false },
       });
       mapRef.current = map;
-      map.addControl(new AttributionControl({ compact: false }), "bottom-right");
-
       timeout = window.setTimeout(() => setStatus("error"), MAP_LOAD_TIMEOUT);
 
       map.on("styledata", () => {
@@ -350,7 +382,10 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         if (labelsDirtyRef.current) refreshLabels(map);
       });
 
-      map.on("moveend", () => refreshLabels(map));
+      map.on("moveend", () => {
+        refreshLabels(map);
+        syncWorldView(map);
+      });
       map.on("idle", () => refreshLabels(map));
 
       map.on("zoom", () => {
@@ -441,6 +476,13 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       </div>
 
       <div className="map-panel">
+        {status === "ready" && !atWorldView ? (
+          <button type="button" className="map-reset" onClick={resetView}>
+            <span aria-hidden="true">↺</span>
+            Terug naar de wereldkaart
+          </button>
+        ) : null}
+
         <fieldset className="map-poi-list">
           <legend className="sr-only">Locaties op de kaart</legend>
           {points.map((point) => (

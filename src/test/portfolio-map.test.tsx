@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PortfolioMap } from "@/components/portfolio-map";
 import { pointsOfInterest } from "@/data/points-of-interest";
 import { projects } from "@/data/projects";
+import { GENERAL_MAX_ZOOM, worldCamera } from "@/lib/map-camera";
 
 const mapMocks = vi.hoisted(() => {
   const handlers = new Map<string, Array<(event?: { error?: Error }) => void>>();
@@ -32,6 +33,7 @@ const mapMocks = vi.hoisted(() => {
     })),
     getCanvas: vi.fn(() => document.createElement("canvas")),
     getZoom: vi.fn(() => 1.35),
+    getCenter: vi.fn(() => ({ lng: 7, lat: 43 })),
     isMoving: vi.fn(() => false),
     setPadding: vi.fn(),
     setMaxZoom: vi.fn(),
@@ -217,6 +219,48 @@ describe("portfolio-kaart", () => {
       expect(call[0]).not.toBe("water");
     }
     expect(mapMocks.map.setLayoutProperty).not.toHaveBeenCalled();
+  });
+
+  it("biedt een knop om terug te gaan naar het wereldbeeld", async () => {
+    const user = userEvent.setup();
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    // The camera starts on the world globe, so there is nothing to return to yet.
+    expect(screen.queryByRole("button", { name: /terug naar de wereldkaart/i })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Urbexium" }));
+    expect(screen.getByRole("button", { name: /terug naar de wereldkaart/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /terug naar de wereldkaart/i }));
+
+    // The POI had lowered the zoom limit to its own detail level, so it is restored too.
+    expect(mapMocks.map.setMaxZoom).toHaveBeenLastCalledWith(GENERAL_MAX_ZOOM);
+    expect(mapMocks.map.jumpTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        center: [7, 43],
+        zoom: worldCamera(true).zoom,
+        bearing: 0,
+        pitch: 0,
+      }),
+    );
+    expect(screen.queryByRole("button", { name: /terug naar de wereldkaart/i })).toBeNull();
+    expect(screen.queryByText("Gehost op een VPS")).not.toBeInTheDocument();
+  });
+
+  it("toont de knop zodra de camera van het wereldbeeld afwijkt", () => {
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    mapMocks.map.getZoom.mockReturnValue(worldCamera(true).zoom);
+    act(() => emit("moveend"));
+    expect(screen.queryByRole("button", { name: /terug naar de wereldkaart/i })).toBeNull();
+
+    mapMocks.map.getZoom.mockReturnValue(5);
+    act(() => emit("moveend"));
+    expect(screen.getByRole("button", { name: /terug naar de wereldkaart/i })).toBeInTheDocument();
+
+    mapMocks.map.getZoom.mockReturnValue(1.35);
   });
 
   it("tekent de globale cirkel als overlay die met de zoom meeschaalt", () => {

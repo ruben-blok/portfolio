@@ -42,7 +42,7 @@ export const pointsOfInterest: PointOfInterest[] = [
     precision: "approximate",
     center: [6.7735, 51.2277],
     radiusKm: 25,
-    location: "Duitsland",
+    location: "Germany",
     relation: "Gehost op een VPS",
     focusZoom: 7.5,
     maxZoom: 9,

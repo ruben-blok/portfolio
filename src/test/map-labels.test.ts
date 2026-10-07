@@ -34,6 +34,30 @@ describe("kaartlabels", () => {
     expect(labelText(feature("label_city", "  ") as LabelFeature, "name")).toBe("");
   });
 
+  it("toont de Engelse naam en valt terug op de lokale naam", () => {
+    const withEnglish: LabelFeature = {
+      layer: { id: "label_country_1" },
+      properties: { name: "Duitsland", "name:en": "Germany" },
+      geometry: { type: "Point", coordinates: [0, 0] },
+    } as unknown as LabelFeature;
+    expect(labelText(withEnglish, "name")).toBe("Germany");
+
+    const withDeprecatedField: LabelFeature = {
+      layer: { id: "label_country_1" },
+      properties: { name: "Duitsland", name_en: "Germany" },
+      geometry: { type: "Point", coordinates: [0, 0] },
+    } as unknown as LabelFeature;
+    expect(labelText(withDeprecatedField, "name")).toBe("Germany");
+
+    // A blank translation is no translation, so the local name is used instead.
+    const blankEnglish: LabelFeature = {
+      layer: { id: "label_country_1" },
+      properties: { name: "Duitsland", "name:en": "  " },
+      geometry: { type: "Point", coordinates: [0, 0] },
+    } as unknown as LabelFeature;
+    expect(labelText(blankEnglish, "name")).toBe("Duitsland");
+  });
+
   it("toont landen, steden en wegen als naam", () => {
     const labels = toLabels(
       [

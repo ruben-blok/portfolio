@@ -112,7 +112,7 @@
    *
    * Hero stacking order, bottom to top: the WebGL canvas (in flow order), the copy (1),
    * the ASCII layer (2), the map labels (3), the POI circles (4) and markers (5), the
-   * map status and the attribution (6) and the panel (7).
+   * map status (6) and the panel (7).
    */
   .hero-globe {
     position: relative;
@@ -197,6 +197,33 @@
     border-bottom: 1px solid var(--color-rule);
     background: color-mix(in oklab, var(--color-paper) 86%, transparent);
     backdrop-filter: blur(2px);
+  }
+
+  /* Narrow strip above the location list: the way back to the default world globe,
+     offered only while the camera is away from it. */
+  .map-reset {
+    grid-column: 1 / -1;
+    display: flex;
+    min-height: 2.5rem;
+    align-items: center;
+    gap: 0.45rem;
+    padding-inline: 1rem;
+    border-bottom: 1px solid var(--color-rule);
+    color: var(--color-forest-deep);
+    font-size: var(--text-note);
+    font-weight: 650;
+    text-align: start;
+    cursor: pointer;
+    transition: color 200ms var(--ease-settle);
+  }
+
+  .map-reset:hover {
+    color: var(--color-forest);
+  }
+
+  .map-reset:focus-visible {
+    outline: 2px solid var(--color-forest);
+    outline-offset: -2px;
   }
 
   .map-poi-list {
@@ -380,28 +407,6 @@
     text-decoration-color: var(--color-forest);
   }
 
-  /* The frame no longer forms a stacking context, so the corner containers have to be
-     lifted over the hero ASCII layer themselves. */
-  .map-canvas .maplibregl-ctrl-bottom-right {
-    z-index: 6;
-  }
-
-  .maplibregl-ctrl-attrib {
-    max-width: calc(100% - 1rem);
-    background: color-mix(in oklab, var(--color-paper) 94%, transparent);
-    color: var(--color-soft);
-    font-family: var(--font-body);
-    font-size: 0.625rem;
-  }
-
-  .maplibregl-ctrl-attrib.compact {
-    min-height: 0;
-  }
-
-  .maplibregl-ctrl-attrib a {
-    color: var(--color-forest-deep);
-  }
-
   @media (min-width: 768px) {
     .map-poi-list {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -434,6 +439,10 @@
     }
 
     .map-poi-list button {
+      padding-inline: 1rem 1.25rem;
+    }
+
+    .map-reset {
       padding-inline: 1rem 1.25rem;
     }
 
