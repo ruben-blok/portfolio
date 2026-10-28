@@ -14,7 +14,7 @@ export const projects: Project[] = [
     title: "Urbexium",
     tagline: "Een platform waar mensen verlaten locaties bekijken, delen en ontdekken.",
     summary:
-      "Een platform waar mensen verlaten locaties bekijken, delen en ontdekken. AI en machine learning helpen gebruikers om plekken te vinden die ze anders nooit hadden gevonden.",
+      "AI en machine learning helpen gebruikers om plekken te vinden die ze anders nooit hadden gevonden.",
     stack: ["Python", "JavaScript"],
     href: "https://keeponrolling.nl",
     linkLabel: "Bezoek keeponrolling.nl",
@@ -24,7 +24,7 @@ export const projects: Project[] = [
     title: "UrbexBench",
     tagline: "Benchmark voor het herkennen van verlaten locaties op satellietbeelden.",
     summary:
-      "Een benchmark die meet hoe goed visuele taalmodellen verlaten en niet-verlaten locaties op satellietbeelden van elkaar onderscheiden. Het combineert data-analyse met een praktische evaluatie van modelkwaliteit.",
+      "De benchmark combineert data-analyse met een praktische evaluatie van modelkwaliteit.",
     stack: ["Python"],
     href: "https://github.com/ruben-blok/urbexbench",
     linkLabel: "Bekijk op GitHub",
@@ -33,8 +33,7 @@ export const projects: Project[] = [
     id: "escape-room",
     title: "Escape room",
     tagline: "Interactieve escape room in de browser: puzzels en logica in een verlaten huis.",
-    summary:
-      "Een interactieve escape room in de browser: een verlaten huis, puzzels en logica die spelers verder brengen. De nadruk lag op spelstructuur en een duidelijke gebruikersflow.",
+    summary: "De nadruk lag op spelstructuur en een duidelijke gebruikersflow.",
     stack: ["JavaScript", "PHP"],
     href: "https://github.com/ZephanvanderWeijde/LPC",
     linkLabel: "Bekijk op GitHub",
@@ -43,8 +42,7 @@ export const projects: Project[] = [
     id: "ouderavond",
     title: "Ouderavond",
     tagline: "Een informatieve website voor ouders van nieuwe leerlingen.",
-    summary:
-      "Een informatieve website voor ouders van nieuwe leerlingen, met de nadruk op rustige presentatie en een structuur die snel te scannen is.",
+    summary: "De nadruk lag op rustige presentatie en een structuur die snel te scannen is.",
     stack: ["HTML", "CSS"],
     href: "https://github.com/TechniekCollegeRotterdam/project-p1-ouderavond-sod1c-westland",
     linkLabel: "Bekijk op GitHub",

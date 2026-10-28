@@ -2,6 +2,7 @@
 
 @theme {
   --color-paper: #f7f6f1;
+  --color-chalk: #e8e8df;
   --color-ink: #1a1917;
   --color-soft: #57564e;
   --color-rule: #dcdad0;
@@ -18,6 +19,10 @@
   --text-section: clamp(1.875rem, 4vw, 2.75rem);
   --text-section--line-height: 1.07;
   --text-section--letter-spacing: -0.018em;
+
+  --text-project: clamp(1.75rem, 2.8vw, 2.5rem);
+  --text-project--line-height: 1.04;
+  --text-project--letter-spacing: -0.018em;
 
   --text-title: clamp(1.5rem, 2.4vw, 1.875rem);
   --text-title--line-height: 1.14;
@@ -99,8 +104,41 @@
     }
   }
 
-  .prose-column {
-    max-width: 62ch;
+  /*
+   * Section tones. Tailwind utilities resolve their colors through these custom
+   * properties, so a tone only remaps the palette; no section needs a separate
+   * dark variant for every text, border or link color.
+   */
+  .tone-chalk {
+    --color-rule: #cfcec2;
+    background-color: var(--color-chalk);
+  }
+
+  .tone-forest {
+    --color-ink: var(--color-paper);
+    --color-soft: #c9d2cb;
+    --color-rule: #3a5c4c;
+    background-color: var(--color-forest);
+    color: var(--color-ink);
+  }
+
+  .tone-forest-deep {
+    --color-ink: var(--color-paper);
+    --color-soft: #b9c6bd;
+    --color-rule: #2e4a3d;
+    background-color: var(--color-forest-deep);
+    color: var(--color-ink);
+  }
+
+  .tone-forest :focus-visible,
+  .tone-forest-deep :focus-visible {
+    outline-color: var(--color-paper);
+  }
+
+  .tone-forest ::selection,
+  .tone-forest-deep ::selection {
+    background-color: var(--color-paper);
+    color: var(--color-forest-deep);
   }
 
   /*

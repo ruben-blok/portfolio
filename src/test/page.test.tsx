@@ -131,7 +131,9 @@ describe("portfolio pagina", () => {
 
     for (const link of profileLinks.filter((item) => !item.href.startsWith("mailto:"))) {
       expect(
-        screen.getByRole("link", { name: `${link.label} (opent in een nieuw tabblad)` }),
+        screen.getByRole("link", {
+          name: `${link.label}, ${link.handle} (opent in een nieuw tabblad)`,
+        }),
         link.label,
       ).toBeInTheDocument();
     }
