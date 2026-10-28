@@ -205,6 +205,8 @@ export function toLabels(
       [label.x - textWidth / 2 - 2, label.y - metrics.lineHeight / 2],
       [label.x + textWidth / 2 + 2, label.y + metrics.lineHeight / 2],
     ];
+    // A name whose text is clipped by the edge is worse than no name at all.
+    if (box[0][0] < 4 || box[0][1] < 4 || box[1][0] > width - 4 || box[1][1] > height - 4) continue;
     if (occupied.some((other) => intersects(box, other))) continue;
 
     seenText.add(key);

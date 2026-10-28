@@ -95,6 +95,19 @@ describe("kaartlabels", () => {
     expect(labels.map((label) => label.text)).toEqual(["Rotterdam"]);
   });
 
+  it("laat namen vallen waarvan de tekst buiten de kaart zou vallen", () => {
+    const labels = toLabels(
+      [feature("label_city", "Rotterdam")],
+      ([, latitude]) => ({
+        x: VIEWPORT.width - 5,
+        y: 200 + latitude,
+      }),
+      VIEWPORT,
+    );
+
+    expect(labels).toHaveLength(0);
+  });
+
   it("kiest de hoogste rang wanneer namen elkaar overlappen", () => {
     const labels = toLabels(
       [

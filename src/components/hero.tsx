@@ -8,24 +8,22 @@ import { projects } from "@/data/projects";
 export function Hero() {
   return (
     <section id="top" aria-labelledby="top-titel" className="shell hero-globe">
-      <div className="hero-grid grid grid-cols-1 gap-y-12 pt-14 pb-[4.5rem] md:grid-cols-12 md:gap-x-8 md:pt-20 md:pb-24 lg:pt-24">
-        <div className="hero-copy md:col-span-5 lg:col-span-4">
-          <p className="rise rise-1 font-display text-label text-soft italic">{profile.role}</p>
+      <div className="hero-grid grid grid-cols-1 pt-12 md:pt-16 lg:grid-cols-12 lg:gap-x-8 lg:pt-24">
+        <div className="hero-copy max-w-[34rem] pb-10 md:pb-12 lg:col-span-5 lg:max-w-none lg:pb-16">
+          <p className="text-label font-medium text-soft">{profile.role}</p>
           <h1
             id="top-titel"
-            className="rise rise-2 mt-4 font-display text-[clamp(2.5rem,4.6vw,3.75rem)] leading-[1.02] tracking-[-0.022em] md:mt-6"
+            className="mt-5 max-w-[18ch] font-display text-[clamp(2.5rem,4.2vw,3.5rem)] leading-[1.02] tracking-[-0.022em] lg:mt-6"
           >
             {profile.headline}
           </h1>
-          <p className="rise rise-3 mt-6 max-w-[48ch] text-lead text-soft md:mt-8">
-            {profile.intro}
-          </p>
-          <div className="rise rise-4 mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 md:mt-10">
+          <p className="mt-6 max-w-[42ch] text-copy text-soft md:mt-8">{profile.intro}</p>
+          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3">
             <a
               href="#projecten"
-              className="inline-flex min-h-11 items-center bg-forest px-7 py-4 text-note font-semibold text-paper transition-[background-color,translate] duration-200 ease-settle hover:-translate-y-0.5 hover:bg-forest-deep motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              className="inline-flex min-h-11 items-center bg-forest px-7 py-4 text-note font-semibold text-paper transition-[background-color] duration-200 ease-settle hover:bg-forest-deep motion-reduce:transition-none"
             >
-              Bekijk mijn projecten
+              Bekijk projecten
             </a>
             <a
               href={`mailto:${profile.email}`}
@@ -35,7 +33,14 @@ export function Hero() {
             </a>
           </div>
         </div>
-        <div className="hero-map md:col-span-7 lg:col-span-8">
+
+        {/*
+          Invisible layout anchor for the map camera: the globe is positioned in the
+          right-hand column at desktop, but the map itself paints behind the whole hero.
+        */}
+        <div className="hero-map-anchor" aria-hidden="true" />
+
+        <div className="hero-map">
           <PortfolioMap points={pointsOfInterest} projects={projects} />
         </div>
       </div>

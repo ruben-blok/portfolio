@@ -16,8 +16,8 @@ export const projects: Project[] = [
     summary:
       "AI en machine learning helpen gebruikers om plekken te vinden die ze anders nooit hadden gevonden.",
     stack: ["Python", "JavaScript"],
-    href: "https://keeponrolling.nl",
-    linkLabel: "Bezoek keeponrolling.nl",
+    href: "https://urbexium.com",
+    linkLabel: "Bezoek urbexium.com",
   },
   {
     id: "urbexbench",

@@ -160,12 +160,19 @@
     position: relative;
   }
 
-  /* The map column holds only the location list and detail; the frame itself is
-     absolutely positioned against .hero-globe, so this element must stay static. */
+  /*
+   * The map is a full-bleed band below the copy on tablet and mobile, and a background
+   * behind the whole desktop hero. The anchor keeps the camera centred on the right-hand
+   * column without the map section having to own that column's width.
+   */
   .hero-map {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
+  }
+
+  .hero-map-anchor {
+    display: none;
   }
 
   .portfolio-map {
@@ -187,7 +194,7 @@
        the hero copy, and the copy has to sit above this paper (a positioned element
        with `z-index: auto` paints below every positive z-index) but below the ASCII. */
     overflow: hidden;
-    background: #e8e8df;
+    background: var(--color-chalk);
   }
 
   /* Below the ASCII layer, so a zoomed-in globe draws over the copy. */
@@ -197,104 +204,203 @@
   }
 
   /*
-   * Below the tablet breakpoint the hero is a single column with the copy above the
-   * map, so there is no left/right split for the copy to hide in: the frame drops back
-   * under the grid, which keeps the art, the labels and the markers below the copy
-   * exactly as on a page without the desktop stack, and the copy keeps the scrim that
-   * reads it over the globe.
+   * Below the desktop split the hero is a single column: the map is a band with its own
+   * height below the copy, so no label or marker can ever land on top of the text.
    */
-  @media (max-width: 767px) {
+  @media (max-width: 1023px) {
     .map-frame {
-      z-index: 0;
+      position: relative;
+      inset: auto;
+      height: clamp(20rem, 56vw, 27rem);
+      margin-inline: calc(50% - 50vw);
+      border-top: 1px solid var(--color-rule);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    /* The map section becomes a full-width row under the copy; only the anchor keeps
+       the right-hand column's width for the camera. */
+    .hero-map {
+      display: contents;
     }
 
-    .hero-copy::before {
-      position: absolute;
-      inset: -2rem -2rem -2rem -2rem;
-      z-index: -1;
-      background: linear-gradient(
-        90deg,
-        color-mix(in oklab, var(--color-paper) 88%, transparent) 0%,
-        color-mix(in oklab, var(--color-paper) 84%, transparent) 62%,
-        transparent 100%
-      );
-      backdrop-filter: blur(1.5px);
-      content: "";
+    .hero-map-anchor {
+      display: block;
+      grid-column: 6 / -1;
+      grid-row: 1;
+      min-height: 1px;
+      pointer-events: none;
+    }
+
+    .portfolio-map {
+      grid-column: 1 / -1;
+      grid-row: 2;
     }
   }
 
   /*
-   * The panel under the map is one sheet: the location list and the detail of the
-   * selected location share a single translucent surface over the ASCII art.
+   * The legend is a paper margin under the map, not a card on top of it. Its background
+   * runs the full viewport width while its contents stay on the page grid.
    */
   .map-panel {
-    display: grid;
-    /* Above the hero ASCII layer: the panel is a sheet drawn over the art. */
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    /* Above the hero ASCII layer: the legend is a sheet drawn over the art. */
     position: relative;
     z-index: 7;
-    border-bottom: 1px solid var(--color-rule);
-    background: color-mix(in oklab, var(--color-paper) 86%, transparent);
-    backdrop-filter: blur(2px);
+    padding-block: 1.1rem 1.25rem;
   }
 
-  /* Narrow strip above the location list: the way back to the default world globe,
-     offered only while the camera is away from it. */
-  .map-reset {
-    grid-column: 1 / -1;
+  .map-panel::before {
+    position: absolute;
+    inset: 0 calc(50% - 50vw);
+    z-index: -1;
+    border-top: 1px solid var(--color-rule);
+    background: var(--color-paper);
+    content: "";
+  }
+
+  .map-legend {
     display: flex;
-    min-height: 2.5rem;
-    align-items: center;
-    gap: 0.45rem;
-    padding-inline: 1rem;
-    border-bottom: 1px solid var(--color-rule);
-    color: var(--color-forest-deep);
-    font-size: var(--text-note);
-    font-weight: 650;
-    text-align: start;
-    cursor: pointer;
-    transition: color 200ms var(--ease-settle);
+    min-inline-size: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
 
-  .map-reset:hover {
-    color: var(--color-forest);
-  }
-
-  .map-reset:focus-visible {
-    outline: 2px solid var(--color-forest);
-    outline-offset: -2px;
+  .map-caption {
+    flex: none;
+    padding: 0;
+    color: var(--color-soft);
+    font-size: var(--text-label);
+    font-weight: 500;
   }
 
   .map-poi-list {
-    display: grid;
-    border-bottom: 1px solid var(--color-rule);
+    display: flex;
+    min-inline-size: 0;
+    flex-wrap: wrap;
+    gap: 0.15rem 1.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
 
   .map-poi-list button {
-    display: flex;
+    display: inline-flex;
     min-height: 2.75rem;
     align-items: center;
-    padding-block: 0.6rem;
-    font-weight: 650;
+    gap: 0.5rem;
+    padding-block: 0.35rem;
+    color: var(--color-ink);
+    font-size: var(--text-note);
+    font-weight: 500;
     text-align: start;
     cursor: pointer;
   }
 
-  .map-poi-list button + button {
-    border-top: 1px solid var(--color-rule);
+  .map-poi-list button > span:first-child {
+    color: var(--color-forest);
+    font-size: 0.5rem;
+    opacity: 0.55;
   }
 
   .map-poi-list button[aria-pressed="true"] {
     color: var(--color-forest);
+    font-weight: 600;
   }
 
-  .map-prompt,
-  .poi-detail {
-    padding-block: 1rem;
+  /* The detail slot keeps one height whether it shows the prompt, a location or the
+     reset action, so selecting a location never moves the locations line. */
+  .map-panel-detail {
+    display: flex;
+    min-width: 0;
+    min-height: 4.5rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  @media (max-width: 1023px) {
+    /* On narrow screens the legend keeps only the location name and its actions;
+       the relation would push the fixed slot taller. */
+    .poi-detail-heading p {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 
   .map-prompt {
     color: var(--color-soft);
     font-size: var(--text-note);
+  }
+
+  .poi-detail-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.6rem;
+  }
+
+  .poi-detail h2 {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    line-height: 1.2;
+  }
+
+  .map-detail-actions {
+    display: flex;
+    min-height: 2.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 1.5rem;
+  }
+
+  .map-detail-actions a,
+  .map-reset {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    color: var(--color-ink);
+    font-size: var(--text-note);
+    text-decoration-line: underline;
+    text-decoration-color: var(--color-rule);
+    text-underline-offset: 0.3rem;
+    transition: color 200ms var(--ease-settle);
+  }
+
+  .map-detail-actions a:hover {
+    color: var(--color-forest);
+    text-decoration-color: var(--color-forest);
+  }
+
+  /* The way back to the default world globe, offered only while the camera is away. */
+  .map-reset {
+    gap: 0.4rem;
+    color: var(--color-soft);
+    font-size: var(--text-label);
+    cursor: pointer;
+  }
+
+  .map-reset:hover {
+    color: var(--color-forest);
+    text-decoration-color: var(--color-forest);
+  }
+
+  .map-reset:focus-visible {
+    outline: 2px solid var(--color-forest);
+    outline-offset: 3px;
   }
 
   .map-fallback-links {
@@ -304,11 +410,16 @@
     /* Above the hero ASCII layer, like the panel. */
     position: relative;
     z-index: 7;
-    padding-block: 1.25rem;
-    border-bottom: 1px solid var(--color-rule);
-    background: color-mix(in oklab, var(--color-paper) 86%, transparent);
-    backdrop-filter: blur(2px);
+    padding-block: 1rem 1.25rem;
     font-size: var(--text-note);
+  }
+
+  .map-fallback-links::before {
+    position: absolute;
+    inset: 0 calc(50% - 50vw);
+    z-index: -1;
+    background: var(--color-paper);
+    content: "";
   }
 
   .map-canvas {
@@ -370,8 +481,11 @@
     inset-inline-start: 0;
     color: var(--color-forest-deep);
     font-family: var(--font-body);
-    font-weight: 600;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
     line-height: 1;
+    opacity: 0.72;
     text-shadow:
       0 0 2px var(--color-paper),
       0 0 2px var(--color-paper),
@@ -380,17 +494,46 @@
     white-space: nowrap;
   }
 
+  /* A phone-only note pinned inside the top of the map field. On desktop the map is
+     the richer view already, so the note disappears there. */
+  .map-mobile-tip {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .map-mobile-tip {
+      display: block;
+      position: absolute;
+      inset-block-start: 0.9rem;
+      inset-inline-start: 1rem;
+      z-index: 6;
+      max-width: calc(100% - 2rem);
+      padding: 0.35rem 0.55rem;
+      background: color-mix(in oklab, var(--color-paper) 90%, transparent);
+      color: var(--color-soft);
+      font-size: var(--text-label);
+      line-height: 1.4;
+      pointer-events: none;
+    }
+  }
+
+  /* A map status is a margin note, not a sheet over the hero: the copy stays visible
+     while the tiles load and after the map fails. */
   .map-status {
     position: absolute;
-    inset: 0;
+    inset: 0.9rem 1rem auto auto;
     z-index: 6;
-    display: grid;
-    place-items: center;
-    padding: 2rem;
-    background: color-mix(in oklab, var(--color-paper) 92%, transparent);
+    max-width: min(18rem, calc(100% - 2rem));
+    padding: 0.45rem 0.65rem;
+    background: color-mix(in oklab, var(--color-paper) 90%, transparent);
     color: var(--color-soft);
-    font-size: var(--text-note);
-    text-align: center;
+    font-size: var(--text-label);
+    line-height: 1.4;
+    text-align: end;
+  }
+
+  .map-status p {
+    margin: 0;
   }
 
   .map-marker {
@@ -409,7 +552,7 @@
    * right of the projected point. Centre the symbol on the anchor instead, which is
    * where the approximate circle is centred too.
    */
-  .map-marker > span:first-child {
+  .map-canvas .map-marker > span:first-child {
     translate: -50% 0;
   }
 
@@ -428,7 +571,7 @@
     display: inline-block;
   }
 
-  .map-marker-approximate > span:first-child {
+  .map-canvas .map-marker-approximate > span:first-child {
     font-size: 1.35rem;
     opacity: 0.72;
   }
@@ -445,53 +588,22 @@
     text-decoration-color: var(--color-forest);
   }
 
-  @media (min-width: 768px) {
-    .map-poi-list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .poi-detail,
-    .map-prompt {
-      padding-inline-start: 1rem;
-    }
-
-    .map-poi-list button {
-      padding-inline: 1rem;
-    }
-
-    .map-poi-list button + button {
-      border-top: 0;
-      border-inline-start: 1px solid var(--color-rule);
-    }
-  }
-
   @media (min-width: 1024px) {
     .map-panel {
-      grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: 2rem;
+      align-items: center;
+      padding-block: 1.25rem 1.5rem;
     }
 
-    .map-poi-list {
-      grid-template-columns: minmax(0, 1fr);
-      border-bottom: 0;
-      border-inline-end: 1px solid var(--color-rule);
+    .map-legend {
+      grid-column: 1 / 8;
     }
 
-    .map-poi-list button {
-      padding-inline: 1rem 1.25rem;
-    }
-
-    .map-reset {
-      padding-inline: 1rem 1.25rem;
-    }
-
-    .map-poi-list button + button {
-      border-inline-start: 0;
-      border-top: 1px solid var(--color-rule);
-    }
-
-    .poi-detail,
-    .map-prompt {
-      padding-inline-start: 1.75rem;
+    .map-panel-detail {
+      min-height: 6.25rem;
+      grid-column: 8 / -1;
     }
   }
 }
@@ -500,7 +612,7 @@
   @keyframes rise {
     from {
       opacity: 0;
-      transform: translate3d(0, 1.375rem, 0);
+      transform: translate3d(0, 1.25rem, 0);
     }
     to {
       opacity: 1;
@@ -508,24 +620,8 @@
     }
   }
 
-  .rise {
-    animation: rise 720ms var(--ease-settle) both;
-  }
-
-  .rise-1 {
-    animation-delay: 40ms;
-  }
-
-  .rise-2 {
-    animation-delay: 140ms;
-  }
-
-  .rise-3 {
-    animation-delay: 230ms;
-  }
-
-  .rise-4 {
-    animation-delay: 310ms;
+  .hero-copy {
+    animation: rise 680ms var(--ease-settle) both;
   }
 
   .rule-wipe {

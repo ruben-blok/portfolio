@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ExpressionSpecification,
   Map as MapLibreMap,
   Marker as MapLibreMarker,
   type Marker,
@@ -43,9 +44,34 @@ type PortfolioMapProps = {
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
 const MAP_LOAD_TIMEOUT = 15_000;
 const MARKER_LABEL_ZOOM = 4;
+const LABEL_MIN_ZOOM = 4;
+const POI_FLY_DURATION = 2600;
+const RESET_FLY_DURATION = 2200;
 const ASCII_INK = "#14332a";
 const ASCII_PAPER = "#e8e8df";
-const MAX_LABELS = 60;
+const MAX_LABELS = 16;
+/**
+ * Positron draws land and paper with the same colour, so at country scale every cell
+ * reads as blank paper. Darkening the background between those zooms gives the land a
+ * light stipple while leaving the world globe and the street-level paper untouched.
+ */
+const LAND_TINT: ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  0,
+  "rgb(242, 243, 240)",
+  5,
+  "rgb(242, 243, 240)",
+  7,
+  "rgb(221, 223, 218)",
+  11,
+  "rgb(221, 223, 218)",
+  13,
+  "rgb(242, 243, 240)",
+  22,
+  "rgb(242, 243, 240)",
+];
 
 /**
  * Copies the WebGL frame into a small scratch buffer and returns its pixels. Reading
@@ -70,6 +96,11 @@ function readFrame(source: HTMLCanvasElement, sample: AsciiSample) {
  * needs; hiding them would also drop their tiles and their query results. The transition
  * is zeroed so no ink fades through on the first frames.
  */
+function tintBasemapSurface(map: MapLibreMap) {
+  if (!map.getLayer("background")) return;
+  map.setPaintProperty("background", "background-color", LAND_TINT);
+}
+
 function silenceBasemapSymbols(map: MapLibreMap) {
   // Transition names are valid at runtime but absent from the paint property type.
   const setPaint = map.setPaintProperty.bind(map) as (
@@ -102,9 +133,11 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const labelsFrameRef = useRef<number | undefined>(undefined);
   const pendingLabelsRef = useRef(false);
   const labelsDirtyRef = useRef(true);
+  const resettingRef = useRef(false);
   const [labels, setLabels] = useState<MapLabel[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [atWorldView, setAtWorldView] = useState(true);
+  const [hasMoved, setHasMoved] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   const selectedPoint = points.find((point) => point.id === selectedId);
@@ -113,12 +146,14 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const selectPoint = (point: PointOfInterest) => {
     setSelectedId(point.id);
     setAtWorldView(false);
+    setHasMoved(true);
+    resettingRef.current = false;
     const map = mapRef.current;
     if (!map) return;
 
     map.setMaxZoom(point.maxZoom);
     const camera = pointCamera(point);
-    const options = { ...camera, duration: reduceMotionRef.current ? 0 : 1800 };
+    const options = { ...camera, duration: reduceMotionRef.current ? 0 : POI_FLY_DURATION };
     if (reduceMotionRef.current) map.jumpTo(options);
     else map.flyTo(options);
   };
@@ -131,14 +166,25 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
   const resetView = () => {
     setSelectedId(undefined);
     setAtWorldView(true);
+    setHasMoved(false);
     const map = mapRef.current;
     if (!map) return;
 
     map.setMaxZoom(GENERAL_MAX_ZOOM);
     const compact = window.matchMedia("(max-width: 767px)").matches;
-    const options = { ...worldCamera(compact), duration: reduceMotionRef.current ? 0 : 1800 };
-    if (reduceMotionRef.current) map.jumpTo(options);
-    else map.flyTo(options);
+    const options = {
+      ...worldCamera(compact),
+      duration: reduceMotionRef.current ? 0 : RESET_FLY_DURATION,
+    };
+    if (reduceMotionRef.current) {
+      resettingRef.current = false;
+      map.jumpTo(options);
+      return;
+    }
+    // The world flight can settle a fraction off target on a globe projection. Snap
+    // exactly to the world camera when it ends so the reset never needs a second click.
+    resettingRef.current = true;
+    map.flyTo(options);
   };
 
   selectPointRef.current = selectPoint;
@@ -200,6 +246,13 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
      * ASCII paint and only when the camera or the tiles actually changed.
      */
     const refreshLabels = (map: MapLibreMap) => {
+      if (map.getZoom() < LABEL_MIN_ZOOM) {
+        // The world view stays unlabelled: the ASCII globe is the subject, not a
+        // backdrop for every country name in the basemap.
+        setLabels((current) => (current.length ? [] : current));
+        return;
+      }
+
       if (pendingLabelsRef.current) return;
       pendingLabelsRef.current = true;
 
@@ -235,32 +288,33 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
 
     /**
      * The map canvas always covers the whole viewport width, so the globe itself is
-     * positioned with the camera instead of the layout. Left padding shifts the
-     * camera centre into the middle of the map column — right of the copy, above the
-     * location list — which is where the globe belongs at world scale; zooming then
-     * grows it from that spot.
+     * positioned with the camera instead of the layout. Left padding shifts the camera
+     * centre into the middle of the map anchor — right of the copy, above the legend —
+     * which is where the globe belongs at world scale; zooming then grows it from that
+     * spot. Below the desktop split the map is a normal band under the copy and needs no
+     * padding at all.
      */
     const centerGlobeOnMapColumn = (map: MapLibreMap) => {
       const container = containerRef.current;
-      const column = container?.closest(".hero-map");
-      if (!container || !(column instanceof HTMLElement)) {
+      const anchor = container?.closest(".hero-grid")?.querySelector(".hero-map-anchor");
+      if (!container || !(anchor instanceof HTMLElement)) {
         map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
         return;
       }
-      if (window.matchMedia("(max-width: 767px)").matches) {
+      if (window.matchMedia("(max-width: 1023px)").matches) {
         map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
         return;
       }
       const canvasRect = container.getBoundingClientRect();
-      const columnRect = column.getBoundingClientRect();
-      const columnCentre = columnRect.left - canvasRect.left + columnRect.width / 2;
-      const list = container.closest(".hero-grid")?.querySelector(".portfolio-map");
+      const anchorRect = anchor.getBoundingClientRect();
+      const anchorCentre = anchorRect.left - canvasRect.left + anchorRect.width / 2;
+      const legend = container.closest(".hero-grid")?.querySelector(".map-panel");
       map.setPadding({
         top: 0,
         right: 0,
-        bottom: list instanceof HTMLElement ? list.offsetHeight : 0,
+        bottom: legend instanceof HTMLElement ? legend.offsetHeight : 0,
         // With left padding L the camera centres at (L + width) / 2, so L = 2C - width.
-        left: 2 * columnCentre - canvasRect.width,
+        left: 2 * anchorCentre - canvasRect.width,
       });
     };
 
@@ -270,6 +324,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
      * tolerance keeps floating point drift in zoom and centre from flickering the button.
      */
     const syncWorldView = (map: MapLibreMap) => {
+      const compact = window.matchMedia("(max-width: 767px)").matches;
       const camera = worldCamera(compact);
       const center = map.getCenter();
       const atWorld =
@@ -307,8 +362,10 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         window.clearTimeout(timeout);
         map.setProjection({ type: "globe" });
         silenceBasemapSymbols(map);
+        tintBasemapSurface(map);
         setStatus("ready");
         centerGlobeOnMapColumn(map);
+        syncWorldView(map);
 
         const measureCanvas = document.createElement("canvas");
         measureContextRef.current = measureCanvas.getContext("2d");
@@ -383,6 +440,18 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       });
 
       map.on("moveend", () => {
+        if (resettingRef.current) {
+          resettingRef.current = false;
+          const compact = window.matchMedia("(max-width: 767px)").matches;
+          // A fly-to world view can end a fraction off target; jump the last pixels so
+          // the camera is exactly the default world globe.
+          map.jumpTo(worldCamera(compact));
+          setAtWorldView(true);
+          setHasMoved(false);
+          refreshLabels(map);
+          return;
+        }
+        setHasMoved(true);
         refreshLabels(map);
         syncWorldView(map);
       });
@@ -404,11 +473,11 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
           if (!map.isMoving()) centerGlobeOnMapColumn(map);
           labelsDirtyRef.current = true;
         });
-        // The location list sits inside the camera's padding box, so its height
-        // (which grows when a detail panel opens) moves the globe too.
+        // The legend sits inside the camera's padding box, so its height (which grows
+        // when a detail panel opens) moves the globe too.
         observer.observe(containerRef.current);
-        const list = containerRef.current?.closest(".hero-grid")?.querySelector(".portfolio-map");
-        if (list instanceof HTMLElement) observer.observe(list);
+        const legend = containerRef.current?.closest(".hero-grid")?.querySelector(".map-panel");
+        if (legend instanceof HTMLElement) observer.observe(legend);
         resizeObserver = observer;
       }
     } catch {
@@ -454,15 +523,13 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
             <span
               key={label.id}
               className="map-label"
-              style={{
-                transform: `translate(${label.x}px, ${label.y}px)`,
-                fontSize: `${0.625 + label.rank * 0.04}rem`,
-              }}
+              style={{ transform: `translate(${label.x}px, ${label.y}px)` }}
             >
               {label.text}
             </span>
           ))}
         </div>
+        <p className="map-mobile-tip">Bekijk op desktop voor een betere ervaring.</p>
         {status === "loading" ? (
           <p className="map-status" role="status">
             Kaart wordt geladen…
@@ -470,38 +537,54 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         ) : null}
         {status === "error" ? (
           <div className="map-status map-error" role="status">
-            <p>De interactieve kaart kon niet laden. Kies hieronder een locatie.</p>
+            <p>De interactieve kaart kon niet laden. Bekijk de locaties hieronder.</p>
           </div>
         ) : null}
       </div>
 
       <div className="map-panel">
-        {status === "ready" && !atWorldView ? (
-          <button type="button" className="map-reset" onClick={resetView}>
-            <span aria-hidden="true">↺</span>
-            Terug naar de wereldkaart
-          </button>
-        ) : null}
+        <div className="map-legend">
+          <p className="map-caption">Locaties</p>
+          <fieldset className="map-poi-list">
+            <legend className="sr-only">Locaties op de kaart</legend>
+            {points.map((point) => (
+              <button
+                key={point.id}
+                type="button"
+                aria-pressed={selectedId === point.id}
+                onClick={() => selectPoint(point)}
+              >
+                <span aria-hidden="true">◆</span>
+                <span>{point.label}</span>
+              </button>
+            ))}
+          </fieldset>
+        </div>
 
-        <fieldset className="map-poi-list">
-          <legend className="sr-only">Locaties op de kaart</legend>
-          {points.map((point) => (
-            <button
-              key={point.id}
-              type="button"
-              aria-pressed={selectedId === point.id}
-              onClick={() => selectPoint(point)}
-            >
-              {point.label}
-            </button>
-          ))}
-        </fieldset>
+        <div className="map-panel-detail" aria-live="polite">
+          {selectedPoint ? (
+            <PoiDetail point={selectedPoint} />
+          ) : (
+            <p className="map-prompt">Kies een locatie om in te zoomen.</p>
+          )}
 
-        {selectedPoint ? (
-          <PoiDetail point={selectedPoint} project={selectedProject} />
-        ) : (
-          <p className="map-prompt">Kies een locatie om van wereldschaal naar detail te gaan.</p>
-        )}
+          {selectedProject || (status === "ready" && hasMoved && !atWorldView) ? (
+            <div className="map-detail-actions">
+              {selectedProject ? (
+                <a href={`#project-${selectedProject.id}`}>
+                  Naar project
+                  <span className="sr-only"> over {selectedProject.title}</span>
+                </a>
+              ) : null}
+              {status === "ready" && hasMoved && !atWorldView ? (
+                <button type="button" className="map-reset" onClick={resetView}>
+                  <span aria-hidden="true">↺</span>
+                  Terug naar de wereldkaart
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {status === "error" ? (

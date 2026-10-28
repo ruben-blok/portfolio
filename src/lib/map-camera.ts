@@ -12,7 +12,7 @@ export type MapCamera = {
 export function worldCamera(compact: boolean): MapCamera {
   return {
     center: [7, 43],
-    zoom: compact ? 0.65 : 1.35,
+    zoom: compact ? 0.85 : 1.35,
     bearing: 0,
     pitch: 0,
   };

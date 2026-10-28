@@ -16,6 +16,12 @@ describe("projectgegevens", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("linkt Urbexium naar het huidige domein", () => {
+    const urbexium = projects.find((project) => project.id === "urbexium");
+
+    expect(urbexium?.href).toBe("https://urbexium.com");
+  });
+
   it("koppelt elke externe link aan een label en een https-url", () => {
     for (const project of projects) {
       if (!project.href) {

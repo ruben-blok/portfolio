@@ -28,6 +28,10 @@ describe("portfolio pagina", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(profile.headline);
     expect(screen.getByText(profile.role)).toBeInTheDocument();
     expect(screen.getByText(profile.intro)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Bekijk projecten" })).toHaveAttribute(
+      "href",
+      "#projecten",
+    );
   });
 
   it("toont elk project met zijn stack", () => {

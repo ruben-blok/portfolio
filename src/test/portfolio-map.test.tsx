@@ -83,6 +83,7 @@ function emit(event: string) {
 afterEach(() => {
   mapMocks.handlers.clear();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("portfolio-kaart", () => {
@@ -125,7 +126,7 @@ describe("portfolio-kaart", () => {
     const rectSpy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(function (this: HTMLElement) {
-        if (this.classList.contains("hero-map")) {
+        if (this.classList.contains("hero-map-anchor")) {
           return { left: 459, width: 757 } as DOMRect;
         }
         if (this.classList.contains("map-canvas")) {
@@ -144,6 +145,7 @@ describe("portfolio-kaart", () => {
     const { container } = render(
       <div className="hero-grid">
         <div className="hero-copy" />
+        <div className="hero-map-anchor" />
         <div className="hero-map">
           <PortfolioMap points={pointsOfInterest} projects={projects} />
         </div>
@@ -179,6 +181,7 @@ describe("portfolio-kaart", () => {
   it("leest de namen uit de basiskaart en tekent ze als echte tekst", async () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(640);
     vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(480);
+    mapMocks.map.getZoom.mockReturnValue(5);
     mapMocks.map.queryRenderedFeatures.mockReturnValue([
       {
         layer: { id: "label_city" },
@@ -206,6 +209,31 @@ describe("portfolio-kaart", () => {
     const labels = document.querySelectorAll(".map-label");
     expect(labels).toHaveLength(1);
     expect(labels[0].textContent).toBe("Rotterdam");
+
+    mapMocks.map.getZoom.mockReturnValue(1.35);
+  });
+
+  it("toont de desktop-tip in het kaartveld", () => {
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+
+    expect(document.querySelector(".map-mobile-tip")).toHaveTextContent(
+      "Bekijk op desktop voor een betere ervaring.",
+    );
+  });
+
+  it("laat het wereldbeeld zonder basiskaartlabels", async () => {
+    mapMocks.map.getZoom.mockReturnValue(1.35);
+
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    await act(async () => {
+      emit("render");
+      await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
+    });
+
+    expect(mapMocks.map.queryRenderedFeatures).not.toHaveBeenCalled();
+    expect(document.querySelectorAll(".map-label")).toHaveLength(0);
   });
 
   it("dempt de tekst en iconen van symboollagen zonder ze te verbergen", () => {
@@ -246,6 +274,48 @@ describe("portfolio-kaart", () => {
     );
     expect(screen.queryByRole("button", { name: /terug naar de wereldkaart/i })).toBeNull();
     expect(screen.queryByText("Gehost op een VPS")).not.toBeInTheDocument();
+  });
+
+  it("snapt na de reset naar de wereldcamera zodat de knop niet terugkomt", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("max-width: 767px"),
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+
+    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    act(() => emit("styledata"));
+
+    await user.click(screen.getByRole("button", { name: "Urbexium" }));
+    expect(mapMocks.map.flyTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({ duration: 2600 }),
+    );
+
+    await user.click(screen.getByRole("button", { name: /terug naar de wereldkaart/i }));
+    expect(mapMocks.map.flyTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({ duration: 2200 }),
+    );
+
+    // The reset flight has ended: it snaps to the exact world camera and settles there.
+    act(() => emit("moveend"));
+
+    expect(mapMocks.map.jumpTo).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        center: [7, 43],
+        zoom: worldCamera(true).zoom,
+        bearing: 0,
+        pitch: 0,
+      }),
+    );
+    expect(screen.queryByRole("button", { name: /terug naar de wereldkaart/i })).toBeNull();
+    expect(screen.getByText("Kies een locatie om in te zoomen.")).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
   });
 
   it("toont de knop zodra de camera van het wereldbeeld afwijkt", () => {

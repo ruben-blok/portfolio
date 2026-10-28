@@ -47,7 +47,7 @@ Een benchmark voor het evalueren van visuele taalmodellen voor de classificatie 
 Urbexium is een platform waar mensen verlaten locaties kunnen bekijken, delen en ontdekken. Het maakt gebruik van AI- en machine learning-technologie om gebruikers te helpen deze unieke plekken te vinden.
 
 - **Talen gebruikt:** Python, JavaScript
-- **Link:** https://keeponrolling.nl
+- **Link:** https://urbexium.com
 
 ## Skills
 
