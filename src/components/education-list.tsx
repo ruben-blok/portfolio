@@ -1,11 +1,13 @@
 import { Section } from "@/components/section";
-import { education } from "@/data/education";
+import type { SiteContent } from "@/content/types";
 
-export function EducationList() {
+export function EducationList({ content }: { content: SiteContent }) {
+  const section = content.sections.education;
+
   return (
-    <Section id="opleiding" title="Opleiding" lead="Van havo naar software development.">
+    <Section id={section.id} title={section.title} lead={section.lead}>
       <ul className="border-t border-rule">
-        {education.map((entry) => (
+        {content.education.map((entry) => (
           <li
             key={entry.id}
             className="grid grid-cols-1 gap-y-2 border-b border-rule py-8 md:grid-cols-12 md:items-baseline md:gap-x-8 md:py-10"

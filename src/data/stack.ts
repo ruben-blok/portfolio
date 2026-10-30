@@ -1,38 +1,37 @@
-export type StackGroup = {
-  id: string;
-  label: string;
+export type StackGroupId = "talen" | "frontend" | "backend" | "data" | "tooling" | "opleveren";
+
+export type StackGroupBase = {
+  id: StackGroupId;
   items: string[];
 };
 
-export const stackGroups: StackGroup[] = [
+export type StackGroup = StackGroupBase & {
+  label: string;
+};
+
+export const stackGroupBase: StackGroupBase[] = [
   {
     id: "talen",
-    label: "Talen",
     items: ["Python", "TypeScript", "JavaScript", "PHP", "SQL"],
   },
   {
     id: "frontend",
-    label: "Frontend",
     items: ["Next.js", "React", "Tailwind CSS", "shadcn/ui", "HTML", "CSS"],
   },
   {
     id: "backend",
-    label: "Backend",
     items: ["Node.js", "Hono", "Drizzle", "Better Auth", "Zod", "Stripe"],
   },
   {
     id: "data",
-    label: "Data en AI",
     items: ["PostgreSQL", "MySQL / MariaDB", "OpenRouter", "Hugging Face"],
   },
   {
     id: "tooling",
-    label: "Tooling",
     items: ["Git", "Docker", "Docker Compose", "pnpm", "Biome"],
   },
   {
     id: "opleveren",
-    label: "Testen en opleveren",
     items: ["Vitest", "Playwright", "GitHub Actions"],
   },
 ];

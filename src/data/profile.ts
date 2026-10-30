@@ -1,67 +1,39 @@
-export type ProfileLink = {
-  label: string;
+export type ProfileLinkId = "email" | "github" | "linkedin" | "huggingface";
+
+export type ProfileLinkBase = {
+  id: ProfileLinkId;
   href: string;
   handle: string;
 };
 
-export type HeroFact = {
+export type ProfileLink = ProfileLinkBase & {
   label: string;
-  value: string;
 };
 
-export const profile = {
+export const profileBase = {
   name: "Ruben Blok",
-  role: "Junior full-stack developer",
-  location: "Rotterdam",
-  headline: "Ik bouw webapplicaties van database tot interface.",
-  intro:
-    "Ik ben Ruben, student Software Development in Rotterdam. Ik bouw graag applicaties die iets ontsluiten wat anders verborgen blijft: liever duidelijke code dan slimme code.",
   email: "ruben.blok36@gmail.com",
 } as const;
 
-export const heroFacts: HeroFact[] = [
+export const profileLinkBase: ProfileLinkBase[] = [
   {
-    label: "Standplaats",
-    value: "Rotterdam",
+    id: "email",
+    href: `mailto:${profileBase.email}`,
+    handle: profileBase.email,
   },
   {
-    label: "Opleiding",
-    value: "Software Development, Techniek College Rotterdam",
-  },
-  {
-    label: "Focus",
-    value: "Webapplicaties, data en AI",
-  },
-];
-
-export const profileLinks: ProfileLink[] = [
-  {
-    label: "E-mail",
-    href: `mailto:${profile.email}`,
-    handle: profile.email,
-  },
-  {
-    label: "GitHub",
+    id: "github",
     href: "https://github.com/ruben-blok",
     handle: "github.com/ruben-blok",
   },
   {
-    label: "LinkedIn",
+    id: "linkedin",
     href: "https://www.linkedin.com/in/ruben-blok-069597389/",
     handle: "linkedin.com/in/ruben-blok",
   },
   {
-    label: "Hugging Face",
+    id: "huggingface",
     href: "https://huggingface.co/ruben-blok",
     handle: "huggingface.co/ruben-blok",
   },
-];
-
-export const socialLinks = profileLinks.filter((link) => !link.href.startsWith("mailto:"));
-
-export const navigation = [
-  { label: "Projecten", href: "#projecten" },
-  { label: "Stack", href: "#stack" },
-  { label: "Opleiding", href: "#opleiding" },
-  { label: "Contact", href: "#contact" },
 ];

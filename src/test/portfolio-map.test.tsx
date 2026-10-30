@@ -2,8 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PortfolioMap } from "@/components/portfolio-map";
-import { pointsOfInterest } from "@/data/points-of-interest";
-import { projects } from "@/data/projects";
+import { getContent } from "@/content";
 import { GENERAL_MAX_ZOOM, worldCamera } from "@/lib/map-camera";
 
 const mapMocks = vi.hoisted(() => {
@@ -76,6 +75,9 @@ vi.mock("maplibre-gl", () => ({
   setWorkerUrl: mapMocks.setWorkerUrl,
 }));
 
+const nlContent = getContent("nl");
+const enContent = getContent("en");
+
 function emit(event: string) {
   for (const handler of mapMocks.handlers.get(event) ?? []) handler();
 }
@@ -89,7 +91,7 @@ afterEach(() => {
 describe("portfolio-kaart", () => {
   it("laadt de kaart en selecteert exacte en globale locaties", async () => {
     const user = userEvent.setup();
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
 
     expect(screen.getByText("Kaart wordt geladen…")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Interactieve wereldkaart" })).toBeInTheDocument();
@@ -114,6 +116,27 @@ describe("portfolio-kaart", () => {
     );
     expect(screen.getByText("Gehost op een VPS")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /naar project/i })).toHaveAttribute(
+      "href",
+      "#project-urbexium",
+    );
+  });
+
+  it("toont de Engelse kaartteksten en details", async () => {
+    const user = userEvent.setup();
+    render(<PortfolioMap content={enContent} />);
+
+    expect(screen.getByText("Loading map…")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Interactive world map" })).toBeInTheDocument();
+    expect(document.querySelector(".map-mobile-tip")).toHaveTextContent(
+      "View on desktop for a better experience.",
+    );
+    expect(screen.getByText("Choose a location to zoom in.")).toBeInTheDocument();
+
+    act(() => emit("styledata"));
+
+    await user.click(screen.getByRole("button", { name: "Urbexium" }));
+    expect(screen.getByText("Hosted on a VPS")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /go to project/i })).toHaveAttribute(
       "href",
       "#project-urbexium",
     );
@@ -147,7 +170,7 @@ describe("portfolio-kaart", () => {
         <div className="hero-copy" />
         <div className="hero-map-anchor" />
         <div className="hero-map">
-          <PortfolioMap points={pointsOfInterest} projects={projects} />
+          <PortfolioMap content={nlContent} />
         </div>
       </div>,
     );
@@ -168,7 +191,7 @@ describe("portfolio-kaart", () => {
   });
 
   it("toont geen zoomknoppen of zoomcijfers meer", () => {
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     expect(screen.queryByRole("button", { name: /zoomen/i })).not.toBeInTheDocument();
@@ -190,7 +213,7 @@ describe("portfolio-kaart", () => {
       },
     ] as never);
 
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     // The symbol layers stay visible and are silenced by paint opacity instead, so the
@@ -213,8 +236,34 @@ describe("portfolio-kaart", () => {
     mapMocks.map.getZoom.mockReturnValue(1.35);
   });
 
+  it("gebruikt de Engelse plaatsnamen op de Engelse pagina", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(640);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(480);
+    mapMocks.map.getZoom.mockReturnValue(5);
+    mapMocks.map.queryRenderedFeatures.mockReturnValue([
+      {
+        layer: { id: "label_country_1" },
+        properties: { name: "Deutschland", "name:nl": "Duitsland", "name:en": "Germany" },
+        geometry: { type: "Point", coordinates: [4.48, 51.92] },
+      },
+    ] as never);
+
+    render(<PortfolioMap content={enContent} />);
+    act(() => emit("styledata"));
+
+    await act(async () => {
+      emit("render");
+      await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
+    });
+
+    expect(document.querySelector(".map-label")?.textContent).toBe("Germany");
+
+    mapMocks.map.getZoom.mockReturnValue(1.35);
+    mapMocks.map.queryRenderedFeatures.mockReturnValue([]);
+  });
+
   it("toont de desktop-tip in het kaartveld", () => {
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
 
     expect(document.querySelector(".map-mobile-tip")).toHaveTextContent(
       "Bekijk op desktop voor een betere ervaring.",
@@ -224,7 +273,7 @@ describe("portfolio-kaart", () => {
   it("laat het wereldbeeld zonder basiskaartlabels", async () => {
     mapMocks.map.getZoom.mockReturnValue(1.35);
 
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     await act(async () => {
@@ -237,7 +286,7 @@ describe("portfolio-kaart", () => {
   });
 
   it("dempt de tekst en iconen van symboollagen zonder ze te verbergen", () => {
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     expect(mapMocks.map.setPaintProperty).toHaveBeenCalledWith("label_city", "text-opacity", 0);
@@ -251,7 +300,7 @@ describe("portfolio-kaart", () => {
 
   it("biedt een knop om terug te gaan naar het wereldbeeld", async () => {
     const user = userEvent.setup();
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     // The camera starts on the world globe, so there is nothing to return to yet.
@@ -288,7 +337,7 @@ describe("portfolio-kaart", () => {
       })),
     );
 
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     await user.click(screen.getByRole("button", { name: "Urbexium" }));
@@ -319,7 +368,7 @@ describe("portfolio-kaart", () => {
   });
 
   it("toont de knop zodra de camera van het wereldbeeld afwijkt", () => {
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     mapMocks.map.getZoom.mockReturnValue(worldCamera(true).zoom);
@@ -334,7 +383,7 @@ describe("portfolio-kaart", () => {
   });
 
   it("tekent de globale cirkel als overlay die met de zoom meeschaalt", () => {
-    render(<PortfolioMap points={pointsOfInterest} projects={projects} />);
+    render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     const circles = document.querySelectorAll(".map-poi-circle");

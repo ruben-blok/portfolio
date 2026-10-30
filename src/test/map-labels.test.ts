@@ -8,7 +8,13 @@ import {
   toLabels,
 } from "@/lib/map-labels";
 
-const VIEWPORT = { zoom: 4, maxLabels: 20, width: 600, height: 400 };
+const VIEWPORT = {
+  zoom: 4,
+  locale: "nl" as const,
+  maxLabels: 20,
+  width: 600,
+  height: 400,
+};
 
 function feature(
   layer: string,
@@ -30,32 +36,36 @@ describe("kaartlabels", () => {
     expect(LABELLED_LAYERS).toContain("label_city");
     expect(LABELLED_LAYERS).toContain("highway-name-major");
     expect(LABELLED_LAYERS).not.toContain("building");
-    expect(labelText(feature("label_city", "Rotterdam") as LabelFeature, "name")).toBe("Rotterdam");
-    expect(labelText(feature("label_city", "  ") as LabelFeature, "name")).toBe("");
+    expect(labelText(feature("label_city", "Rotterdam") as LabelFeature, "name", "nl")).toBe(
+      "Rotterdam",
+    );
+    expect(labelText(feature("label_city", "  ") as LabelFeature, "name", "nl")).toBe("");
   });
 
-  it("toont de Engelse naam en valt terug op de lokale naam", () => {
-    const withEnglish: LabelFeature = {
+  it("toont de naam in de taal van de pagina en valt terug op de lokale naam", () => {
+    const withTranslations: LabelFeature = {
       layer: { id: "label_country_1" },
-      properties: { name: "Duitsland", "name:en": "Germany" },
+      properties: { name: "Deutschland", "name:nl": "Duitsland", "name:en": "Germany" },
       geometry: { type: "Point", coordinates: [0, 0] },
     } as unknown as LabelFeature;
-    expect(labelText(withEnglish, "name")).toBe("Germany");
+
+    expect(labelText(withTranslations, "name", "nl")).toBe("Duitsland");
+    expect(labelText(withTranslations, "name", "en")).toBe("Germany");
 
     const withDeprecatedField: LabelFeature = {
       layer: { id: "label_country_1" },
-      properties: { name: "Duitsland", name_en: "Germany" },
+      properties: { name: "Deutschland", name_en: "Germany" },
       geometry: { type: "Point", coordinates: [0, 0] },
     } as unknown as LabelFeature;
-    expect(labelText(withDeprecatedField, "name")).toBe("Germany");
+    expect(labelText(withDeprecatedField, "name", "en")).toBe("Germany");
 
     // A blank translation is no translation, so the local name is used instead.
     const blankEnglish: LabelFeature = {
       layer: { id: "label_country_1" },
-      properties: { name: "Duitsland", "name:en": "  " },
+      properties: { name: "Deutschland", "name:en": "  " },
       geometry: { type: "Point", coordinates: [0, 0] },
     } as unknown as LabelFeature;
-    expect(labelText(blankEnglish, "name")).toBe("Duitsland");
+    expect(labelText(blankEnglish, "name", "en")).toBe("Deutschland");
   });
 
   it("toont landen, steden en wegen als naam", () => {

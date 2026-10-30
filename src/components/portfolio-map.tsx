@@ -9,8 +9,8 @@ import {
 } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import { PoiDetail } from "@/components/poi-detail";
+import type { SiteContent } from "@/content/types";
 import type { PointOfInterest } from "@/data/points-of-interest";
-import type { Project } from "@/data/projects";
 import {
   type AsciiSample,
   asciiSample,
@@ -37,8 +37,7 @@ import {
 } from "@/lib/map-labels";
 
 type PortfolioMapProps = {
-  points: PointOfInterest[];
-  projects: Project[];
+  content: SiteContent;
 };
 
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -118,7 +117,8 @@ function silenceBasemapSymbols(map: MapLibreMap) {
   }
 }
 
-export function PortfolioMap({ points, projects }: PortfolioMapProps) {
+export function PortfolioMap({ content }: PortfolioMapProps) {
+  const { locale, map: copy, pointsOfInterest: points, projects } = content;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -276,6 +276,7 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
         setLabels(
           toLabels(features, (position) => map.project(position), {
             zoom: map.getZoom(),
+            locale,
             maxLabels: MAX_LABELS,
             width: container?.clientWidth ?? 0,
             height: container?.clientHeight ?? 0,
@@ -497,18 +498,18 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [locale]);
 
   return (
-    <section className="portfolio-map" aria-label="Interactieve wereldkaart">
-      <p id="map-instructie" className="sr-only">
-        Gebruik de pijltoetsen om de kaart te verplaatsen en plus of min om te zoomen.
+    <section className="portfolio-map" aria-label={copy.regionLabel}>
+      <p id="map-instructions" className="sr-only">
+        {copy.instructions}
       </p>
       <div className="map-frame">
         <div
           ref={containerRef}
           className="map-canvas"
-          aria-describedby="map-instructie"
+          aria-describedby="map-instructions"
           data-status={status}
         />
         {/*
@@ -529,24 +530,24 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
             </span>
           ))}
         </div>
-        <p className="map-mobile-tip">Bekijk op desktop voor een betere ervaring.</p>
+        <p className="map-mobile-tip">{copy.mobileTip}</p>
         {status === "loading" ? (
           <p className="map-status" role="status">
-            Kaart wordt geladen…
+            {copy.loading}
           </p>
         ) : null}
         {status === "error" ? (
           <div className="map-status map-error" role="status">
-            <p>De interactieve kaart kon niet laden. Bekijk de locaties hieronder.</p>
+            <p>{copy.error}</p>
           </div>
         ) : null}
       </div>
 
       <div className="map-panel">
         <div className="map-legend">
-          <p className="map-caption">Locaties</p>
+          <p className="map-caption">{copy.locations}</p>
           <fieldset className="map-poi-list">
-            <legend className="sr-only">Locaties op de kaart</legend>
+            <legend className="sr-only">{copy.locationsLegend}</legend>
             {points.map((point) => (
               <button
                 key={point.id}
@@ -565,21 +566,24 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
           {selectedPoint ? (
             <PoiDetail point={selectedPoint} />
           ) : (
-            <p className="map-prompt">Kies een locatie om in te zoomen.</p>
+            <p className="map-prompt">{copy.prompt}</p>
           )}
 
           {selectedProject || (status === "ready" && hasMoved && !atWorldView) ? (
             <div className="map-detail-actions">
               {selectedProject ? (
                 <a href={`#project-${selectedProject.id}`}>
-                  Naar project
-                  <span className="sr-only"> over {selectedProject.title}</span>
+                  {copy.toProject}
+                  <span className="sr-only">
+                    {" "}
+                    {copy.toProjectAbout.replace("{title}", selectedProject.title)}
+                  </span>
                 </a>
               ) : null}
               {status === "ready" && hasMoved && !atWorldView ? (
                 <button type="button" className="map-reset" onClick={resetView}>
                   <span aria-hidden="true">↺</span>
-                  Terug naar de wereldkaart
+                  {copy.reset}
                 </button>
               ) : null}
             </div>
@@ -596,8 +600,8 @@ export function PortfolioMap({ points, projects }: PortfolioMapProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {point.label} bekijken op OpenStreetMap
-              <span className="sr-only"> (opent in een nieuw tabblad)</span>
+              {copy.openStreetMap.replace("{label}", point.label)}
+              <span className="sr-only"> {content.ui.opensInNewTab}</span>
             </a>
           ))}
         </div>

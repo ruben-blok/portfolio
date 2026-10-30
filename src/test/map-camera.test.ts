@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pointsOfInterest } from "@/data/points-of-interest";
+import { getContent } from "@/content";
 import {
   circleRadiusPixels,
   isValidPosition,
@@ -7,6 +7,8 @@ import {
   pointCamera,
   worldCamera,
 } from "@/lib/map-camera";
+
+const pointsOfInterest = getContent("nl").pointsOfInterest;
 
 describe("kaartcamera", () => {
   it("gebruikt een compactere wereldcamera op mobiel", () => {

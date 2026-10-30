@@ -1,16 +1,13 @@
 import { Section } from "@/components/section";
-import { stackGroups } from "@/data/stack";
+import type { SiteContent } from "@/content/types";
 
-export function StackList() {
+export function StackList({ content }: { content: SiteContent }) {
+  const section = content.sections.stack;
+
   return (
-    <Section
-      id="stack"
-      title="Stack"
-      lead="Waar ik mee werk, van taal tot het gereedschap eromheen."
-      tone="chalk"
-    >
+    <Section id={section.id} title={section.title} lead={section.lead} tone="chalk">
       <dl className="border-t border-rule">
-        {stackGroups.map((group) => (
+        {content.stackGroups.map((group) => (
           <div
             key={group.id}
             className="grid grid-cols-1 gap-y-2 border-b border-rule py-6 md:grid-cols-12 md:items-baseline md:gap-x-8 md:py-7"

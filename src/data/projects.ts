@@ -1,50 +1,39 @@
-export type Project = {
-  id: string;
+export type ProjectId = "urbexium" | "urbexbench" | "escape-room" | "ouderavond";
+
+export type ProjectBase = {
+  id: ProjectId;
+  stack: string[];
+  href?: string;
+};
+
+export type ProjectText = {
   title: string;
   tagline: string;
   summary: string;
-  stack: string[];
-  href?: string;
   linkLabel?: string;
 };
 
-export const projects: Project[] = [
+export type Project = ProjectBase & ProjectText;
+
+export const projectBase: ProjectBase[] = [
   {
     id: "urbexium",
-    title: "Urbexium",
-    tagline: "Een platform waar mensen verlaten locaties bekijken, delen en ontdekken.",
-    summary:
-      "AI en machine learning helpen gebruikers om plekken te vinden die ze anders nooit hadden gevonden.",
     stack: ["Python", "JavaScript"],
     href: "https://urbexium.com",
-    linkLabel: "Bezoek urbexium.com",
   },
   {
     id: "urbexbench",
-    title: "UrbexBench",
-    tagline: "Benchmark voor het herkennen van verlaten locaties op satellietbeelden.",
-    summary:
-      "De benchmark combineert data-analyse met een praktische evaluatie van modelkwaliteit.",
     stack: ["Python"],
     href: "https://github.com/ruben-blok/urbexbench",
-    linkLabel: "Bekijk op GitHub",
   },
   {
     id: "escape-room",
-    title: "Escape room",
-    tagline: "Interactieve escape room in de browser: puzzels en logica in een verlaten huis.",
-    summary: "De nadruk lag op spelstructuur en een duidelijke gebruikersflow.",
     stack: ["JavaScript", "PHP"],
     href: "https://github.com/ZephanvanderWeijde/LPC",
-    linkLabel: "Bekijk op GitHub",
   },
   {
     id: "ouderavond",
-    title: "Ouderavond",
-    tagline: "Een informatieve website voor ouders van nieuwe leerlingen.",
-    summary: "De nadruk lag op rustige presentatie en een structuur die snel te scannen is.",
     stack: ["HTML", "CSS"],
     href: "https://github.com/TechniekCollegeRotterdam/project-p1-ouderavond-sod1c-westland",
-    linkLabel: "Bekijk op GitHub",
   },
 ];

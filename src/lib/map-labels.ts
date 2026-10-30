@@ -1,5 +1,6 @@
 import type { MapGeoJSONFeature } from "maplibre-gl";
 import { MONOSPACE_STACK } from "@/lib/ascii-map";
+import type { Locale } from "@/lib/locale";
 
 /**
  * The basemap style bakes its text into the rasterised symbol layers. Converting the
@@ -78,14 +79,17 @@ function featurePoints(geometry: LabelFeature["geometry"]): [number, number][] {
 }
 
 /**
- * The tiles carry the local name in `name` and the English translation in `name:en`
- * (with the deprecated `name_en` as a second chance), so English is tried first and the
- * local name stays as the fallback for features without a translation.
+ * The tiles carry the local name in `name` and translations in fields such as
+ * `name:nl` and `name:en`. Prefer the page language, then fall back to the
+ * local name for features without that translation.
  */
-const ENGLISH_NAME_FIELDS = ["name:en", "name_en"];
+const LOCALE_NAME_FIELDS: Record<Locale, string[]> = {
+  nl: ["name:nl"],
+  en: ["name:en", "name_en"],
+};
 
-export function labelText(feature: LabelFeature, field: string) {
-  for (const nameField of [...ENGLISH_NAME_FIELDS, field]) {
+export function labelText(feature: LabelFeature, field: string, locale: Locale) {
+  for (const nameField of [...LOCALE_NAME_FIELDS[locale], field]) {
     const value = feature.properties?.[nameField];
     if (typeof value !== "string") continue;
     const trimmed = value.trim();
@@ -134,6 +138,7 @@ export function toLabels(
   project: (position: [number, number]) => { x: number; y: number },
   options: {
     zoom: number;
+    locale: Locale;
     maxLabels: number;
     width: number;
     height: number;
@@ -149,7 +154,7 @@ export function toLabels(
     const rule = rulesByLayer.get(feature.layer?.id ?? "");
     if (!rule || zoom < rule.minZoom) continue;
 
-    const text = labelText(feature, rule.field);
+    const text = labelText(feature, rule.field, options.locale);
     if (!text) continue;
 
     for (const point of featurePoints(feature.geometry)) {

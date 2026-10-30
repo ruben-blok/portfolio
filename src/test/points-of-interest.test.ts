@@ -1,21 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { pointsOfInterest } from "@/data/points-of-interest";
-import { projects } from "@/data/projects";
+import { getContent } from "@/content";
+import type { Locale } from "@/lib/locale";
 import { isValidPosition, pointPosition } from "@/lib/map-camera";
 
-describe("points of interest", () => {
+const locales: Locale[] = ["nl", "en"];
+
+describe.each(locales)("points of interest (%s)", (locale) => {
+  const content = getContent(locale);
+  const { pointsOfInterest, projects } = content;
+
   it("heeft unieke ids, geldige coördinaten en passende zoomgrenzen", () => {
     const ids = pointsOfInterest.map((point) => point.id);
 
     expect(new Set(ids).size).toBe(ids.length);
     for (const point of pointsOfInterest) {
-      expect(point.label).not.toBe("");
-      expect(point.location).not.toBe("");
-      expect(point.relation).not.toBe("");
+      expect(point.label.trim()).not.toBe("");
+      expect(point.location.trim()).not.toBe("");
+      expect(point.relation.trim()).not.toBe("");
       expect(isValidPosition(pointPosition(point))).toBe(true);
       expect(point.focusZoom).toBeLessThanOrEqual(point.maxZoom);
 
-      if (point.precision === "exact") expect(point.address).not.toBe("");
+      if (point.precision === "exact") expect(point.address.trim()).not.toBe("");
       else expect(point.radiusKm).toBeGreaterThan(0);
     }
   });
@@ -27,10 +32,16 @@ describe("points of interest", () => {
       if (point.projectId) expect(projectIds.has(point.projectId)).toBe(true);
     }
   });
+});
 
+describe("points of interest in beide talen", () => {
   it("modelleert de school exact en Urbexium globaal", () => {
-    const school = pointsOfInterest.find((point) => point.id === "techniek-college-schiedam");
-    const urbexium = pointsOfInterest.find((point) => point.id === "urbexium-germany");
+    const school = getContent("nl").pointsOfInterest.find(
+      (point) => point.id === "techniek-college-schiedam",
+    );
+    const urbexium = getContent("nl").pointsOfInterest.find(
+      (point) => point.id === "urbexium-germany",
+    );
 
     expect(school?.precision).toBe("exact");
     if (school?.precision === "exact") {
@@ -39,9 +50,23 @@ describe("points of interest", () => {
     }
 
     expect(urbexium?.precision).toBe("approximate");
-    expect(urbexium?.location).toBe("Germany");
+    expect(urbexium?.location).toBe("Duitsland");
     expect(urbexium?.relation).toBe("Gehost op een VPS");
     expect(urbexium?.maxZoom).toBeLessThanOrEqual(9);
     expect(JSON.stringify(urbexium)).not.toMatch(/strato/i);
+  });
+
+  it("vertaalt de locatieteksten maar houdt de coördinaten gelijk", () => {
+    const nl = getContent("nl").pointsOfInterest;
+    const en = getContent("en").pointsOfInterest;
+
+    expect(en.map((point) => point.id)).toEqual(nl.map((point) => point.id));
+    expect(en.map((point) => pointPosition(point))).toEqual(
+      nl.map((point) => pointPosition(point)),
+    );
+
+    const enUrbexium = en.find((point) => point.id === "urbexium-germany");
+    expect(enUrbexium?.location).toBe("Germany");
+    expect(enUrbexium?.relation).toBe("Hosted on a VPS");
   });
 });

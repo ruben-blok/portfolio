@@ -1,8 +1,9 @@
 import { ProjectPlate } from "@/components/project-plate";
 import { Section } from "@/components/section";
-import { type Project, projects } from "@/data/projects";
+import type { SiteContent } from "@/content/types";
+import type { Project } from "@/data/projects";
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectRow({ project, content }: { project: Project; content: SiteContent }) {
   return (
     <li id={`project-${project.id}`} className="group relative border-b border-rule">
       <div className="grid grid-cols-1 gap-y-6 py-10 md:grid-cols-12 md:gap-x-8 md:py-14">
@@ -18,7 +19,7 @@ function ProjectRow({ project }: { project: Project }) {
         </div>
         <div className="md:col-span-8 md:col-start-5 md:row-start-2 lg:col-span-3 lg:col-start-10 lg:row-start-1">
           <dl>
-            <dt className="text-label text-soft">Stack</dt>
+            <dt className="text-label text-soft">{content.ui.stackLabel}</dt>
             <dd className="mt-1 text-note text-ink">{project.stack.join(", ")}</dd>
           </dl>
           {project.href && project.linkLabel ? (
@@ -28,7 +29,7 @@ function ProjectRow({ project }: { project: Project }) {
               rel="noopener noreferrer"
               className="mt-3 inline-flex min-h-11 items-center text-note text-soft underline decoration-rule underline-offset-4 transition-[color,text-decoration-color] duration-200 ease-settle hover:text-forest hover:decoration-forest group-hover:decoration-forest group-focus-within:decoration-forest motion-reduce:transition-none"
             >
-              {project.linkLabel} <span className="sr-only">(opent in een nieuw tabblad)</span>
+              {project.linkLabel} <span className="sr-only">{content.ui.opensInNewTab}</span>
             </a>
           ) : null}
         </div>
@@ -41,16 +42,14 @@ function ProjectRow({ project }: { project: Project }) {
   );
 }
 
-export function ProjectIndex() {
+export function ProjectIndex({ content }: { content: SiteContent }) {
+  const section = content.sections.projects;
+
   return (
-    <Section
-      id="projecten"
-      title="Projecten"
-      lead="Vier projecten, van een platform voor verlaten plekken tot een benchmark voor satellietbeelden."
-    >
+    <Section id={section.id} title={section.title} lead={section.lead}>
       <ul className="border-t border-rule">
-        {projects.map((project) => (
-          <ProjectRow key={project.id} project={project} />
+        {content.projects.map((project) => (
+          <ProjectRow key={project.id} project={project} content={content} />
         ))}
       </ul>
     </Section>

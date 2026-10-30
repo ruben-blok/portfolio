@@ -17,7 +17,7 @@ const toneStyles: Record<SectionTone, string> = {
 };
 
 export function Section({ id, title, lead, tone = "paper", children }: SectionProps) {
-  const headingId = `${id}-titel`;
+  const headingId = `${id}-title`;
 
   return (
     <section id={id} aria-labelledby={headingId} className={toneStyles[tone]}>
