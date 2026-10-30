@@ -128,7 +128,7 @@ describe("portfolio-kaart", () => {
     expect(screen.getByText("Loading map…")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Interactive world map" })).toBeInTheDocument();
     expect(document.querySelector(".map-mobile-tip")).toHaveTextContent(
-      "View on desktop for a better experience.",
+      "The map is easiest to use on a larger screen.",
     );
     expect(screen.getByText("Choose a location to zoom in.")).toBeInTheDocument();
 
@@ -262,11 +262,11 @@ describe("portfolio-kaart", () => {
     mapMocks.map.queryRenderedFeatures.mockReturnValue([]);
   });
 
-  it("toont de desktop-tip in het kaartveld", () => {
+  it("toont de tip voor een groot scherm in het kaartveld", () => {
     render(<PortfolioMap content={nlContent} />);
 
     expect(document.querySelector(".map-mobile-tip")).toHaveTextContent(
-      "Bekijk op desktop voor een betere ervaring.",
+      "De kaart is het prettigst op een groot scherm.",
     );
   });
 

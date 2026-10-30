@@ -13,7 +13,7 @@ export const enContent: SiteContent = {
   meta: {
     title: "Ruben Blok — Junior full-stack developer",
     description:
-      "Portfolio of Ruben Blok, junior full-stack developer in Rotterdam. Projects, stack and contact.",
+      "Ruben Blok is a junior full-stack developer in Rotterdam. See projects across web, data and AI.",
     ogLocale: "en_US",
   },
   profile: {
@@ -22,7 +22,7 @@ export const enContent: SiteContent = {
     location: "Rotterdam",
     headline: "I build web applications from database to interface.",
     intro:
-      "I am Ruben, a Software Development student in Rotterdam. I like building applications that reveal something that would otherwise stay hidden: clear code over clever code.",
+      "I'm Ruben, a Software Development student in Rotterdam. I build applications that make hidden information visible.",
   },
   heroFacts: [
     {
@@ -53,33 +53,35 @@ export const enContent: SiteContent = {
   projects: buildProjects({
     urbexium: {
       title: "Urbexium",
-      tagline: "A platform where people view, share and discover abandoned locations.",
+      tagline: "A platform to discover, view and share abandoned locations.",
       summary:
-        "AI and machine learning help users find places they would otherwise never have found.",
+        "AI helps users search more precisely and find locations that would otherwise stay hidden.",
       linkLabel: "Visit urbexium.com",
     },
     urbexbench: {
       title: "UrbexBench",
       tagline: "A benchmark for recognizing abandoned locations in satellite imagery.",
-      summary: "The benchmark combines data analysis with a practical evaluation of model quality.",
+      summary:
+        "The benchmark compares vision-language models on the same set of satellite images and sets accuracy against cost.",
       linkLabel: "View on GitHub",
     },
     "escape-room": {
       title: "Escape room",
       tagline:
         "An interactive escape room in the browser: puzzles and logic in an abandoned house.",
-      summary: "The focus was on game structure and a clear user flow.",
+      summary: "The game has a clear structure and a logical progression.",
       linkLabel: "View on GitHub",
     },
     ouderavond: {
       title: "Parents' evening",
-      tagline: "An informative website for parents of new students.",
-      summary: "The focus was on calm presentation and a structure that is quick to scan.",
+      tagline: "A website for parents of new students, explaining how the school works.",
+      summary:
+        "The information is split into short, recognizable sections so parents can quickly find what they need.",
       linkLabel: "View on GitHub",
     },
   }),
   stackGroups: buildStackGroups({
-    talen: "Languages",
+    talen: "Programming languages",
     frontend: "Frontend",
     backend: "Backend",
     data: "Data and AI",
@@ -92,7 +94,7 @@ export const enContent: SiteContent = {
       period: "2025 – present",
     },
     havo: {
-      programme: "Senior general secondary education (havo)",
+      programme: "Havo (senior general secondary education)",
       period: "2021 – 2025",
     },
   }),
@@ -100,7 +102,7 @@ export const enContent: SiteContent = {
     "techniek-college-schiedam": {
       label: "Techniek College Rotterdam",
       location: "Schiedam",
-      relation: "Software Development",
+      relation: "Where I study Software Development.",
     },
     "urbexium-germany": {
       label: "Urbexium",
@@ -112,12 +114,12 @@ export const enContent: SiteContent = {
     projects: {
       id: "projects",
       title: "Projects",
-      lead: "Four projects, from a platform for abandoned places to a benchmark for satellite imagery.",
+      lead: "Projects where web, data and AI come together, such as a platform for abandoned locations and a benchmark for satellite imagery.",
     },
     stack: {
       id: "stack",
       title: "Stack",
-      lead: "What I work with, from languages to the tooling around them.",
+      lead: "What I build with: languages, frameworks, data and tools.",
     },
     education: {
       id: "education",
@@ -148,9 +150,9 @@ export const enContent: SiteContent = {
   map: {
     regionLabel: "Interactive world map",
     instructions: "Use the arrow keys to move the map and plus or minus to zoom.",
-    mobileTip: "View on desktop for a better experience.",
+    mobileTip: "The map is easiest to use on a larger screen.",
     loading: "Loading map…",
-    error: "The interactive map could not load. View the locations below.",
+    error: "The map could not be loaded. View the locations below.",
     locations: "Locations",
     locationsLegend: "Locations on the map",
     prompt: "Choose a location to zoom in.",

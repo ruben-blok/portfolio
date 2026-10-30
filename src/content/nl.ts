@@ -13,7 +13,7 @@ export const nlContent: SiteContent = {
   meta: {
     title: "Ruben Blok — Junior full-stack developer",
     description:
-      "Portfolio van Ruben Blok, junior full-stack developer in Rotterdam. Projecten, stack en contact.",
+      "Ruben Blok is junior full-stack developer in Rotterdam. Bekijk projecten op het snijvlak van web, data en AI.",
     ogLocale: "nl_NL",
   },
   profile: {
@@ -22,11 +22,11 @@ export const nlContent: SiteContent = {
     location: "Rotterdam",
     headline: "Ik bouw webapplicaties van database tot interface.",
     intro:
-      "Ik ben Ruben, student Software Development in Rotterdam. Ik bouw graag applicaties die iets ontsluiten wat anders verborgen blijft: liever duidelijke code dan slimme code.",
+      "Ik ben Ruben, student Software Development in Rotterdam. Ik bouw graag applicaties die verborgen informatie zichtbaar maken.",
   },
   heroFacts: [
     {
-      label: "Standplaats",
+      label: "Locatie",
       value: "Rotterdam",
     },
     {
@@ -53,33 +53,35 @@ export const nlContent: SiteContent = {
   projects: buildProjects({
     urbexium: {
       title: "Urbexium",
-      tagline: "Een platform waar mensen verlaten locaties bekijken, delen en ontdekken.",
+      tagline: "Een platform om verlaten locaties te ontdekken, bekijken en delen.",
       summary:
-        "AI en machine learning helpen gebruikers om plekken te vinden die ze anders nooit hadden gevonden.",
+        "AI helpt gebruikers gerichter te zoeken en locaties te vinden die anders verborgen blijven.",
       linkLabel: "Bezoek urbexium.com",
     },
     urbexbench: {
       title: "UrbexBench",
       tagline: "Benchmark voor het herkennen van verlaten locaties op satellietbeelden.",
       summary:
-        "De benchmark combineert data-analyse met een praktische evaluatie van modelkwaliteit.",
+        "De benchmark vergelijkt visuele taalmodellen op dezelfde set satellietbeelden en zet nauwkeurigheid naast kosten.",
       linkLabel: "Bekijk op GitHub",
     },
     "escape-room": {
       title: "Escape room",
       tagline: "Interactieve escape room in de browser: puzzels en logica in een verlaten huis.",
-      summary: "De nadruk lag op spelstructuur en een duidelijke gebruikersflow.",
+      summary: "Het spel heeft een heldere structuur en een logische opbouw.",
       linkLabel: "Bekijk op GitHub",
     },
     ouderavond: {
       title: "Ouderavond",
-      tagline: "Een informatieve website voor ouders van nieuwe leerlingen.",
-      summary: "De nadruk lag op rustige presentatie en een structuur die snel te scannen is.",
+      tagline:
+        "Een website voor ouders van nieuwe leerlingen, met uitleg over hoe de school werkt.",
+      summary:
+        "De informatie staat in korte, herkenbare blokken, zodat ouders snel vinden wat ze nodig hebben.",
       linkLabel: "Bekijk op GitHub",
     },
   }),
   stackGroups: buildStackGroups({
-    talen: "Talen",
+    talen: "Programmeertalen",
     frontend: "Frontend",
     backend: "Backend",
     data: "Data en AI",
@@ -100,7 +102,7 @@ export const nlContent: SiteContent = {
     "techniek-college-schiedam": {
       label: "Techniek College Rotterdam",
       location: "Schiedam",
-      relation: "Software Development",
+      relation: "Hier studeer ik Software Development.",
     },
     "urbexium-germany": {
       label: "Urbexium",
@@ -112,12 +114,12 @@ export const nlContent: SiteContent = {
     projects: {
       id: "projecten",
       title: "Projecten",
-      lead: "Vier projecten, van een platform voor verlaten plekken tot een benchmark voor satellietbeelden.",
+      lead: "Projecten waarin web, data en AI samenkomen, zoals een platform voor verlaten locaties en een benchmark voor satellietbeelden.",
     },
     stack: {
       id: "stack",
       title: "Stack",
-      lead: "Waar ik mee werk, van taal tot het gereedschap eromheen.",
+      lead: "Waar ik mee bouw: talen, frameworks, data en tools.",
     },
     education: {
       id: "opleiding",
@@ -135,7 +137,7 @@ export const nlContent: SiteContent = {
     backToTop: "Terug naar boven",
     opensInNewTab: "(opent in een nieuw tabblad)",
     viewProjects: "Bekijk projecten",
-    emailMe: "E-mail mij",
+    emailMe: "Stuur een e-mail",
     sectionsNavLabel: "Secties op deze pagina",
     languageNavLabel: "Taal",
     stackLabel: "Stack",
@@ -148,9 +150,9 @@ export const nlContent: SiteContent = {
   map: {
     regionLabel: "Interactieve wereldkaart",
     instructions: "Gebruik de pijltoetsen om de kaart te verplaatsen en plus of min om te zoomen.",
-    mobileTip: "Bekijk op desktop voor een betere ervaring.",
+    mobileTip: "De kaart is het prettigst op een groot scherm.",
     loading: "Kaart wordt geladen…",
-    error: "De interactieve kaart kon niet laden. Bekijk de locaties hieronder.",
+    error: "De kaart kon niet worden geladen. Bekijk de locaties hieronder.",
     locations: "Locaties",
     locationsLegend: "Locaties op de kaart",
     prompt: "Kies een locatie om in te zoomen.",
