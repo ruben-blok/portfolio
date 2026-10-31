@@ -1,8 +1,4 @@
-import type {
-  BoundaryPointOfInterestBase,
-  PointOfInterest,
-  Position,
-} from "@/data/points-of-interest";
+import type { PointOfInterest, Position } from "@/data/points-of-interest";
 
 export const GENERAL_MAX_ZOOM = 19;
 
@@ -59,28 +55,25 @@ export function pointCamera(point: PointOfInterest): MapCamera {
 }
 
 /**
- * Pixels the camera is aimed above an area's centre. The legend padding already lifts the
- * camera content by half its height, and without this the top of the outline lands on the
- * canvas edge — the shape then reads as cut off instead of closed.
+ * South-west and north-east corner of the ring's bounding box, the shape `fitBounds`
+ * expects. Selecting an area frames the whole of it, because the map padding (the legend
+ * takes height away from the viewport) would otherwise push part of the outline off the
+ * canvas and the shape would read as cut off instead of closed.
  */
-const BOUNDARY_NUDGE_PX = 20;
+export function ringBounds(ring: Position[]): [Position, Position] {
+  const [longitude, latitude] = ringCenter(ring);
+  let halfLon = 0;
+  let halfLat = 0;
 
-/**
- * Camera for an area: the ring's centre pushed a little north, so the whole outline sits
- * inside the visible part of the canvas with a margin on the top edge.
- */
-export function boundaryCamera(point: BoundaryPointOfInterestBase): MapCamera {
-  const [longitude, latitude] = ringCenter(point.ring);
-  const metersPerPixel =
-    (METERS_PER_PIXEL_AT_ZOOM_ZERO * Math.cos((latitude * Math.PI) / 180)) / 2 ** point.focusZoom;
-  const nudgeDegrees = (BOUNDARY_NUDGE_PX * metersPerPixel) / 111_320;
+  for (const [lon, lat] of ring) {
+    halfLon = Math.max(halfLon, Math.abs(lon - longitude));
+    halfLat = Math.max(halfLat, Math.abs(lat - latitude));
+  }
 
-  return {
-    center: [longitude, latitude + nudgeDegrees],
-    zoom: point.focusZoom,
-    bearing: 0,
-    pitch: 0,
-  };
+  return [
+    [longitude - halfLon, latitude - halfLat],
+    [longitude + halfLon, latitude + halfLat],
+  ];
 }
 
 export function isValidPosition(position: Position) {

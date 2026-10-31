@@ -45,7 +45,9 @@ const mapMocks = vi.hoisted(() => {
     setPadding: vi.fn(),
     setMaxZoom: vi.fn(),
     flyTo: vi.fn(),
+    fitBounds: vi.fn(),
     jumpTo: vi.fn(),
+    triggerRepaint: vi.fn(),
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
     isStyleLoaded: vi.fn(() => true),
@@ -401,13 +403,16 @@ describe("portfolio-kaart", () => {
 
     const sources = mapMocks.map.addSource.mock.calls.map((call: unknown[]) => call[0]);
     const layers = mapMocks.map.addLayer.mock.calls.map(
-      (call: unknown[]) => call[0] as { id?: string; type?: string; source?: string },
+      (call: unknown[]) =>
+        call[0] as { id?: string; type?: string; source?: string; paint?: Record<string, unknown> },
     );
     const outline = layers.find((layer) => layer.id === "poi-boundary-westland-outline");
 
     expect(sources).toContain("poi-boundary-westland");
     expect(outline?.type).toBe("line");
     expect(outline?.source).toBe("poi-boundary-westland");
+    // De laag is alleen een hit-target: de zichtbare contour wordt als glyphs getekend.
+    expect(outline?.paint?.["line-opacity"]).toBe(0);
     // Een vlak krijgt geen marker en geen cirkel: de outline is de vorm.
     expect(document.querySelector(".map-marker-boundary")).toBeNull();
     expect(document.querySelectorAll(".map-poi-circle")).toHaveLength(
@@ -416,6 +421,15 @@ describe("portfolio-kaart", () => {
 
     act(() => emitLayer("click", "poi-boundary-westland-outline"));
     expect(screen.getByText("Hier woon ik")).toBeInTheDocument();
+
+    // Framing: fitBounds met de kolom-padding, niet center+zoom, zodat de legenda-ondermarge
+    // de outline niet tegen de bovenrand duwt.
+    const fit = mapMocks.map.fitBounds.mock.calls.at(-1) as unknown[] | undefined;
+    expect(fit).toBeDefined();
+    const [bounds, options] = fit as [[number, number][], { maxZoom?: number }];
+    expect(options.maxZoom).toBe(11);
+    expect(bounds[0][0]).toBeLessThan(bounds[1][0]);
+    expect(bounds[0][1]).toBeLessThan(bounds[1][1]);
   });
 
   it("tekent de globale cirkels als overlay die met de zoom meeschalen", () => {
