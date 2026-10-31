@@ -13,13 +13,13 @@ export const nlContent: SiteContent = {
   meta: {
     title: "Ruben Blok — Junior full-stack developer",
     description:
-      "Ruben Blok is junior full-stack developer in Rotterdam. Bekijk projecten op het snijvlak van web, data en AI.",
+      "Ruben Blok is junior full-stack developer in Westland. Bekijk projecten op het snijvlak van web, data en AI.",
     ogLocale: "nl_NL",
   },
   profile: {
     ...profileBase,
     role: "Junior full-stack developer",
-    location: "Rotterdam",
+    location: "Westland",
     headline: "Ik bouw webapplicaties van database tot interface.",
     intro:
       "Ik ben Ruben, student Software Development in Rotterdam. Ik bouw graag applicaties die verborgen informatie zichtbaar maken.",
@@ -27,7 +27,7 @@ export const nlContent: SiteContent = {
   heroFacts: [
     {
       label: "Locatie",
-      value: "Rotterdam",
+      value: "Westland",
     },
     {
       label: "Opleiding",
@@ -108,6 +108,11 @@ export const nlContent: SiteContent = {
       label: "Urbexium",
       location: "Duitsland",
       relation: "Gehost op een VPS",
+    },
+    westland: {
+      label: "Westland",
+      location: "Nederland",
+      relation: "Hier woon ik",
     },
   }),
   sections: {

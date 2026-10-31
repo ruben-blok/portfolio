@@ -13,13 +13,13 @@ export const enContent: SiteContent = {
   meta: {
     title: "Ruben Blok — Junior full-stack developer",
     description:
-      "Ruben Blok is a junior full-stack developer in Rotterdam. See projects across web, data and AI.",
+      "Ruben Blok is a junior full-stack developer in Westland. See projects across web, data and AI.",
     ogLocale: "en_US",
   },
   profile: {
     ...profileBase,
     role: "Junior full-stack developer",
-    location: "Rotterdam",
+    location: "Westland",
     headline: "I build web applications from database to interface.",
     intro:
       "I'm Ruben, a Software Development student in Rotterdam. I build applications that make hidden information visible.",
@@ -27,7 +27,7 @@ export const enContent: SiteContent = {
   heroFacts: [
     {
       label: "Based in",
-      value: "Rotterdam",
+      value: "Westland",
     },
     {
       label: "Education",
@@ -108,6 +108,11 @@ export const enContent: SiteContent = {
       label: "Urbexium",
       location: "Germany",
       relation: "Hosted on a VPS",
+    },
+    westland: {
+      label: "Westland",
+      location: "Netherlands",
+      relation: "This is where I live",
     },
   }),
   sections: {

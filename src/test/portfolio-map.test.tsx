@@ -382,12 +382,14 @@ describe("portfolio-kaart", () => {
     mapMocks.map.getZoom.mockReturnValue(1.35);
   });
 
-  it("tekent de globale cirkel als overlay die met de zoom meeschaalt", () => {
+  it("tekent de globale cirkels als overlay die met de zoom meeschalen", () => {
     render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     const circles = document.querySelectorAll(".map-poi-circle");
-    expect(circles).toHaveLength(1);
+    expect(circles).toHaveLength(
+      nlContent.pointsOfInterest.filter((point) => point.precision === "approximate").length,
+    );
 
     const exact = document.querySelector(".map-marker-exact");
     expect(exact).not.toBeNull();

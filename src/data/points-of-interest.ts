@@ -2,7 +2,7 @@ import type { ProjectId } from "@/data/projects";
 
 export type Position = [longitude: number, latitude: number];
 
-export type PointOfInterestId = "techniek-college-schiedam" | "urbexium-germany";
+export type PointOfInterestId = "techniek-college-schiedam" | "urbexium-germany" | "westland";
 
 type PointOfInterestBaseFields = {
   id: PointOfInterestId;
@@ -50,5 +50,13 @@ export const pointOfInterestBase: PointOfInterestBase[] = [
     focusZoom: 7.5,
     maxZoom: 9,
     projectId: "urbexium",
+  },
+  {
+    id: "westland",
+    precision: "approximate",
+    center: [4.2, 52.0],
+    radiusKm: 8,
+    focusZoom: 10,
+    maxZoom: 12,
   },
 ];
