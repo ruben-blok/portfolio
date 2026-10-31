@@ -54,9 +54,9 @@ export const pointOfInterestBase: PointOfInterestBase[] = [
   {
     id: "westland",
     precision: "approximate",
-    center: [4.2, 52.0],
-    radiusKm: 8,
-    focusZoom: 10,
-    maxZoom: 12,
+    center: [4.2019089, 52.0014044],
+    radiusKm: 7,
+    focusZoom: 11,
+    maxZoom: 14,
   },
 ];
