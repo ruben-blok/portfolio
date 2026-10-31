@@ -1,5 +1,5 @@
 import type { ProjectId } from "@/data/projects";
-import { westlandBoundaryCenter, westlandBoundaryRing } from "@/data/westland-boundary";
+import { westlandBoundaryRing } from "@/data/westland-boundary";
 
 export type Position = [longitude: number, latitude: number];
 
@@ -25,14 +25,13 @@ export type ApproximatePointOfInterestBase = PointOfInterestBaseFields & {
 };
 
 /**
- * An area instead of a point: the ring is drawn as an outline, so there is no radius
- * to approximate with a circle and no single spot to drop a marker on. `center` is the
- * middle of the ring's bounding box and only exists to aim the camera at the area.
+ * An area instead of a point: the ring is drawn as an outline, so there is no radius to
+ * approximate with a circle and no single coordinate to store. Everything positional —
+ * the camera, the OpenStreetMap link — derives from the ring itself.
  */
 export type BoundaryPointOfInterestBase = PointOfInterestBaseFields & {
   precision: "boundary";
   ring: Position[];
-  center: Position;
 };
 
 export type PointOfInterestBase =
@@ -69,7 +68,6 @@ export const pointOfInterestBase: PointOfInterestBase[] = [
   {
     id: "westland",
     precision: "boundary",
-    center: westlandBoundaryCenter,
     ring: westlandBoundaryRing,
     focusZoom: 11,
     maxZoom: 14,

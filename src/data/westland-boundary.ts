@@ -149,9 +149,3 @@ export const westlandBoundaryRing: [number, number][] = [
   [4.113638, 52.006641],
   [4.110164, 52.004436],
 ];
-
-/**
- * Middelpunt van de bounding box van de ring, gebruikt als cameradoel wanneer de
- * grens wordt gekozen. De ring zelf blijft de bron voor de vorm.
- */
-export const westlandBoundaryCenter: [number, number] = [4.209992, 52.001425];

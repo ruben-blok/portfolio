@@ -78,12 +78,13 @@ describe("points of interest in beide talen", () => {
     if (nl?.precision === "boundary" && en?.precision === "boundary") {
       expect(nl.ring.length).toBeGreaterThan(100);
       expect(en.ring).toEqual(nl.ring);
-      expect(en.center).toEqual(nl.center);
-      // Het middelpunt ligt in Westland, niet op de campus in Schiedam.
-      expect(nl.center[0]).toBeGreaterThan(4.11);
-      expect(nl.center[0]).toBeLessThan(4.31);
-      expect(nl.center[1]).toBeGreaterThan(51.94);
-      expect(nl.center[1]).toBeLessThan(52.06);
+      // Het anker wordt uit de ring afgeleid en ligt in Westland, niet op de campus.
+      const anchor = pointPosition(nl);
+      expect(pointPosition(en)).toEqual(anchor);
+      expect(anchor[0]).toBeGreaterThan(4.11);
+      expect(anchor[0]).toBeLessThan(4.31);
+      expect(anchor[1]).toBeGreaterThan(51.94);
+      expect(anchor[1]).toBeLessThan(52.06);
 
       const lons = nl.ring.map(([longitude]) => longitude);
       const lats = nl.ring.map(([, latitude]) => latitude);

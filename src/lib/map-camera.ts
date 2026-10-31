@@ -18,8 +18,31 @@ export function worldCamera(compact: boolean): MapCamera {
   };
 }
 
+export function ringCenter(ring: Position[]): Position {
+  let minLon = Number.POSITIVE_INFINITY;
+  let maxLon = Number.NEGATIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+
+  for (const [longitude, latitude] of ring) {
+    if (longitude < minLon) minLon = longitude;
+    if (longitude > maxLon) maxLon = longitude;
+    if (latitude < minLat) minLat = latitude;
+    if (latitude > maxLat) maxLat = latitude;
+  }
+
+  return [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
+}
+
+/**
+ * The spot a point of interest is aimed at. An area has no coordinate of its own, so its
+ * anchor is the middle of the ring's bounding box — derived here rather than stored, so
+ * the ring stays the single source of truth for the shape.
+ */
 export function pointPosition(point: PointOfInterest): Position {
-  return point.precision === "exact" ? point.position : point.center;
+  if (point.precision === "exact") return point.position;
+  if (point.precision === "boundary") return ringCenter(point.ring);
+  return point.center;
 }
 
 export function pointCamera(point: PointOfInterest): MapCamera {
