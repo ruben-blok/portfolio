@@ -11,8 +11,16 @@ const mapMocks = vi.hoisted(() => {
   const map = {
     setProjection: vi.fn(),
     addControl: vi.fn(),
-    on: vi.fn((event: string, handler: (event?: { error?: Error }) => void) => {
-      handlers.set(event, [...(handlers.get(event) ?? []), handler]);
+    on: vi.fn((event: string, first?: unknown, second?: unknown) => {
+      // MapLibre also takes `on(type, layerId, listener)` for layer-scoped events, so
+      // store those under "type:layerId" and keep both-argument calls as they were.
+      const handler = typeof first === "function" ? first : second;
+      if (typeof handler !== "function") return;
+      const key = typeof first === "string" ? `${event}:${first}` : event;
+      handlers.set(key, [
+        ...(handlers.get(key) ?? []),
+        handler as (event?: { error?: Error }) => void,
+      ]);
     }),
     addSource: vi.fn(),
     addLayer: vi.fn(),
@@ -80,6 +88,11 @@ const enContent = getContent("en");
 
 function emit(event: string) {
   for (const handler of mapMocks.handlers.get(event) ?? []) handler();
+}
+
+/** Fires a listener registered for one map layer, e.g. the boundary outline. */
+function emitLayer(event: string, layerId: string) {
+  for (const handler of mapMocks.handlers.get(`${event}:${layerId}`) ?? []) handler();
 }
 
 afterEach(() => {
@@ -380,6 +393,29 @@ describe("portfolio-kaart", () => {
     expect(screen.getByRole("button", { name: /terug naar de wereldkaart/i })).toBeInTheDocument();
 
     mapMocks.map.getZoom.mockReturnValue(1.35);
+  });
+
+  it("trekt de gemeentegrens als outline en selecteert hem via de kaartlaag", () => {
+    render(<PortfolioMap content={nlContent} />);
+    act(() => emit("styledata"));
+
+    const sources = mapMocks.map.addSource.mock.calls.map((call: unknown[]) => call[0]);
+    const layers = mapMocks.map.addLayer.mock.calls.map(
+      (call: unknown[]) => call[0] as { id?: string; type?: string; source?: string },
+    );
+    const outline = layers.find((layer) => layer.id === "poi-boundary-westland-outline");
+
+    expect(sources).toContain("poi-boundary-westland");
+    expect(outline?.type).toBe("line");
+    expect(outline?.source).toBe("poi-boundary-westland");
+    // Een vlak krijgt geen marker en geen cirkel: de outline is de vorm.
+    expect(document.querySelector(".map-marker-boundary")).toBeNull();
+    expect(document.querySelectorAll(".map-poi-circle")).toHaveLength(
+      nlContent.pointsOfInterest.filter((point) => point.precision === "approximate").length,
+    );
+
+    act(() => emitLayer("click", "poi-boundary-westland-outline"));
+    expect(screen.getByText("Hier woon ik")).toBeInTheDocument();
   });
 
   it("tekent de globale cirkels als overlay die met de zoom meeschalen", () => {

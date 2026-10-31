@@ -1,4 +1,5 @@
 import type { ProjectId } from "@/data/projects";
+import { westlandBoundaryCenter, westlandBoundaryRing } from "@/data/westland-boundary";
 
 export type Position = [longitude: number, latitude: number];
 
@@ -23,7 +24,21 @@ export type ApproximatePointOfInterestBase = PointOfInterestBaseFields & {
   radiusKm: number;
 };
 
-export type PointOfInterestBase = ExactPointOfInterestBase | ApproximatePointOfInterestBase;
+/**
+ * An area instead of a point: the ring is drawn as an outline, so there is no radius
+ * to approximate with a circle and no single spot to drop a marker on. `center` is the
+ * middle of the ring's bounding box and only exists to aim the camera at the area.
+ */
+export type BoundaryPointOfInterestBase = PointOfInterestBaseFields & {
+  precision: "boundary";
+  ring: Position[];
+  center: Position;
+};
+
+export type PointOfInterestBase =
+  | ExactPointOfInterestBase
+  | ApproximatePointOfInterestBase
+  | BoundaryPointOfInterestBase;
 
 export type PointOfInterestText = {
   label: string;
@@ -53,9 +68,9 @@ export const pointOfInterestBase: PointOfInterestBase[] = [
   },
   {
     id: "westland",
-    precision: "approximate",
-    center: [4.2019089, 52.0014044],
-    radiusKm: 7,
+    precision: "boundary",
+    center: westlandBoundaryCenter,
+    ring: westlandBoundaryRing,
     focusZoom: 11,
     maxZoom: 14,
   },

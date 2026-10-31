@@ -10,7 +10,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { PoiDetail } from "@/components/poi-detail";
 import type { SiteContent } from "@/content/types";
-import type { PointOfInterest } from "@/data/points-of-interest";
+import type {
+  BoundaryPointOfInterestBase,
+  PointOfInterest,
+  PointOfInterestId,
+} from "@/data/points-of-interest";
 import {
   type AsciiSample,
   asciiSample,
@@ -117,6 +121,59 @@ function silenceBasemapSymbols(map: MapLibreMap) {
   }
 }
 
+const boundarySourceId = (id: PointOfInterestId) => `poi-boundary-${id}`;
+const boundaryLayerId = (id: PointOfInterestId) => `poi-boundary-${id}-outline`;
+
+const BOUNDARY_LINE_WIDTH: ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  6,
+  1,
+  11,
+  2,
+  16,
+  3,
+];
+
+/** Slightly heavier while the location is hovered or focused in the list. */
+const BOUNDARY_LINE_WIDTH_ACTIVE: ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  6,
+  2,
+  11,
+  3.5,
+  16,
+  5,
+];
+
+/**
+ * An area carries no single spot to hang a marker on, so its ring goes into the style as
+ * a GeoJSON source and is drawn as a line layer: an outline, never a filled shape. The
+ * line picks up the ink colour the ASCII pass already uses, which keeps it readable as
+ * ASCII once the canvas is sampled.
+ */
+function addBoundaryOutline(map: MapLibreMap, point: BoundaryPointOfInterestBase) {
+  map.addSource(boundarySourceId(point.id), {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: { type: "Polygon", coordinates: [point.ring] },
+    },
+  });
+
+  map.addLayer({
+    id: boundaryLayerId(point.id),
+    type: "line",
+    source: boundarySourceId(point.id),
+    layout: { "line-join": "round", "line-cap": "round" },
+    paint: { "line-color": ASCII_INK, "line-width": BOUNDARY_LINE_WIDTH },
+  });
+}
+
 export function PortfolioMap({ content }: PortfolioMapProps) {
   const { locale, map: copy, pointsOfInterest: points, projects } = content;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -188,6 +245,22 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
   };
 
   selectPointRef.current = selectPoint;
+
+  /**
+   * Highlights a boundary outline while its list entry is hovered or focused, so the
+   * keyboard and pointer route to an area reaches the map the same way a marker does.
+   * A no-op for the point locations, which have no line layer.
+   */
+  const emphasizeBoundary = (id: PointOfInterestId, active: boolean) => {
+    const map = mapRef.current;
+    const layerId = boundaryLayerId(id);
+    if (!map?.getLayer(layerId)) return;
+    map.setPaintProperty(
+      layerId,
+      "line-width",
+      active ? BOUNDARY_LINE_WIDTH_ACTIVE : BOUNDARY_LINE_WIDTH,
+    );
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -388,6 +461,21 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
             );
           }
 
+          if (point.precision === "boundary") {
+            const layerId = boundaryLayerId(point.id);
+            addBoundaryOutline(map, point);
+            // No marker: the outline itself is the target on the map, so it takes the
+            // same pointer and click affordances a marker would.
+            map.on("mousemove", layerId, () => {
+              map.getCanvas().style.cursor = "pointer";
+            });
+            map.on("mouseleave", layerId, () => {
+              map.getCanvas().style.cursor = "";
+            });
+            map.on("click", layerId, () => selectPointRef.current(point));
+            continue;
+          }
+
           const marker = document.createElement("button");
           marker.type = "button";
           marker.className = `map-marker map-marker-${point.precision}`;
@@ -553,6 +641,10 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
                 key={point.id}
                 type="button"
                 aria-pressed={selectedId === point.id}
+                onPointerEnter={() => emphasizeBoundary(point.id, true)}
+                onPointerLeave={() => emphasizeBoundary(point.id, false)}
+                onFocus={() => emphasizeBoundary(point.id, true)}
+                onBlur={() => emphasizeBoundary(point.id, false)}
                 onClick={() => selectPoint(point)}
               >
                 <span aria-hidden="true">◆</span>

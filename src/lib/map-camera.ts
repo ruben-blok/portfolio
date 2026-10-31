@@ -52,7 +52,8 @@ export function circleRadiusPixels(radiusKm: number, latitude: number, zoom: num
 
 export function openStreetMapUrl(point: PointOfInterest) {
   const [longitude, latitude] = pointPosition(point);
-  const zoom = point.precision === "exact" ? 18 : 8;
+  // An area opens at the zoom that frames the whole municipality rather than a street.
+  const zoom = point.precision === "exact" ? 18 : point.precision === "boundary" ? 11 : 8;
   const marker = point.precision === "exact" ? `?mlat=${latitude}&mlon=${longitude}` : "";
   return `https://www.openstreetmap.org/${marker}#map=${zoom}/${latitude}/${longitude}`;
 }
