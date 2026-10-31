@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { getContent } from "@/content";
 import {
+  boundaryCamera,
   circleRadiusPixels,
   isValidPosition,
   openStreetMapUrl,
   pointCamera,
+  ringCenter,
   worldCamera,
 } from "@/lib/map-camera";
 
@@ -41,5 +43,21 @@ describe("kaartcamera", () => {
 
     expect(school && openStreetMapUrl(school)).toContain("mlat=");
     expect(urbexium && openStreetMapUrl(urbexium)).not.toContain("mlat=");
+  });
+
+  it("richt een gebied iets noordelijker dan het midden, op focusZoom", () => {
+    const westland = pointsOfInterest.find((point) => point.precision === "boundary");
+    expect(westland?.precision).toBe("boundary");
+    if (westland?.precision !== "boundary") return;
+
+    const center = ringCenter(westland.ring);
+    const camera = boundaryCamera(westland);
+
+    expect(camera.zoom).toBe(westland.focusZoom);
+    expect(camera.pitch).toBe(0);
+    expect(camera.center[0]).toBeCloseTo(center[0], 9);
+    // Noordelijker, zodat de bovenkant van de outline vrij blijft van de canvasrand.
+    expect(camera.center[1]).toBeGreaterThan(center[1]);
+    expect(camera.center[1] - center[1]).toBeLessThan(0.01);
   });
 });

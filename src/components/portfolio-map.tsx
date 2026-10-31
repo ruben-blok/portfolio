@@ -24,6 +24,7 @@ import {
   toneForZoom,
 } from "@/lib/ascii-map";
 import {
+  boundaryCamera,
   circleRadiusPixels,
   GENERAL_MAX_ZOOM,
   openStreetMapUrl,
@@ -124,29 +125,35 @@ function silenceBasemapSymbols(map: MapLibreMap) {
 const boundarySourceId = (id: PointOfInterestId) => `poi-boundary-${id}`;
 const boundaryLayerId = (id: PointOfInterestId) => `poi-boundary-${id}-outline`;
 
+/**
+ * The boundary is drawn for the ASCII pass, not for the WebGL frame: each glyph samples a
+ * 2x3 subpixel block, so a hairline averages away to the same tone as the roads. The stroke
+ * therefore has to be about one glyph cell (6 CSS px) wide to fill a cell and land on a
+ * dense character instead of a mid tone.
+ */
 const BOUNDARY_LINE_WIDTH: ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
   6,
-  1,
-  11,
-  2,
-  16,
   3,
+  11,
+  8,
+  16,
+  12,
 ];
 
-/** Slightly heavier while the location is hovered or focused in the list. */
+/** Noticeably heavier while the location is hovered or focused in the list. */
 const BOUNDARY_LINE_WIDTH_ACTIVE: ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
   6,
-  2,
+  4,
   11,
-  3.5,
+  12,
   16,
-  5,
+  18,
 ];
 
 /**
@@ -209,7 +216,9 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
     if (!map) return;
 
     map.setMaxZoom(point.maxZoom);
-    const camera = pointCamera(point);
+    // An area is aimed a little off-centre so its outline clears the top edge; the
+    // legend padding otherwise pushes the shape against it and it reads as cut off.
+    const camera = point.precision === "boundary" ? boundaryCamera(point) : pointCamera(point);
     const options = { ...camera, duration: reduceMotionRef.current ? 0 : POI_FLY_DURATION };
     if (reduceMotionRef.current) map.jumpTo(options);
     else map.flyTo(options);

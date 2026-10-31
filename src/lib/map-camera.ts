@@ -1,4 +1,8 @@
-import type { PointOfInterest, Position } from "@/data/points-of-interest";
+import type {
+  BoundaryPointOfInterestBase,
+  PointOfInterest,
+  Position,
+} from "@/data/points-of-interest";
 
 export const GENERAL_MAX_ZOOM = 19;
 
@@ -51,6 +55,31 @@ export function pointCamera(point: PointOfInterest): MapCamera {
     zoom: point.focusZoom,
     bearing: 0,
     pitch: point.precision === "exact" ? 38 : 0,
+  };
+}
+
+/**
+ * Pixels the camera is aimed above an area's centre. The legend padding already lifts the
+ * camera content by half its height, and without this the top of the outline lands on the
+ * canvas edge — the shape then reads as cut off instead of closed.
+ */
+const BOUNDARY_NUDGE_PX = 20;
+
+/**
+ * Camera for an area: the ring's centre pushed a little north, so the whole outline sits
+ * inside the visible part of the canvas with a margin on the top edge.
+ */
+export function boundaryCamera(point: BoundaryPointOfInterestBase): MapCamera {
+  const [longitude, latitude] = ringCenter(point.ring);
+  const metersPerPixel =
+    (METERS_PER_PIXEL_AT_ZOOM_ZERO * Math.cos((latitude * Math.PI) / 180)) / 2 ** point.focusZoom;
+  const nudgeDegrees = (BOUNDARY_NUDGE_PX * metersPerPixel) / 111_320;
+
+  return {
+    center: [longitude, latitude + nudgeDegrees],
+    zoom: point.focusZoom,
+    bearing: 0,
+    pitch: 0,
   };
 }
 
