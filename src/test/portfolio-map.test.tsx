@@ -11,8 +11,16 @@ const mapMocks = vi.hoisted(() => {
   const map = {
     setProjection: vi.fn(),
     addControl: vi.fn(),
-    on: vi.fn((event: string, handler: (event?: { error?: Error }) => void) => {
-      handlers.set(event, [...(handlers.get(event) ?? []), handler]);
+    on: vi.fn((event: string, first?: unknown, second?: unknown) => {
+      // MapLibre also takes `on(type, layerId, listener)` for layer-scoped events, so
+      // store those under "type:layerId" and keep both-argument calls as they were.
+      const handler = typeof first === "function" ? first : second;
+      if (typeof handler !== "function") return;
+      const key = typeof first === "string" ? `${event}:${first}` : event;
+      handlers.set(key, [
+        ...(handlers.get(key) ?? []),
+        handler as (event?: { error?: Error }) => void,
+      ]);
     }),
     addSource: vi.fn(),
     addLayer: vi.fn(),
@@ -37,7 +45,9 @@ const mapMocks = vi.hoisted(() => {
     setPadding: vi.fn(),
     setMaxZoom: vi.fn(),
     flyTo: vi.fn(),
+    fitBounds: vi.fn(),
     jumpTo: vi.fn(),
+    triggerRepaint: vi.fn(),
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
     isStyleLoaded: vi.fn(() => true),
@@ -80,6 +90,11 @@ const enContent = getContent("en");
 
 function emit(event: string) {
   for (const handler of mapMocks.handlers.get(event) ?? []) handler();
+}
+
+/** Fires a listener registered for one map layer, e.g. the boundary outline. */
+function emitLayer(event: string, layerId: string) {
+  for (const handler of mapMocks.handlers.get(`${event}:${layerId}`) ?? []) handler();
 }
 
 afterEach(() => {
@@ -382,12 +397,49 @@ describe("portfolio-kaart", () => {
     mapMocks.map.getZoom.mockReturnValue(1.35);
   });
 
-  it("tekent de globale cirkel als overlay die met de zoom meeschaalt", () => {
+  it("trekt de gemeentegrens als outline en selecteert hem via de kaartlaag", () => {
+    render(<PortfolioMap content={nlContent} />);
+    act(() => emit("styledata"));
+
+    const sources = mapMocks.map.addSource.mock.calls.map((call: unknown[]) => call[0]);
+    const layers = mapMocks.map.addLayer.mock.calls.map(
+      (call: unknown[]) =>
+        call[0] as { id?: string; type?: string; source?: string; paint?: Record<string, unknown> },
+    );
+    const outline = layers.find((layer) => layer.id === "poi-boundary-westland-outline");
+
+    expect(sources).toContain("poi-boundary-westland");
+    expect(outline?.type).toBe("line");
+    expect(outline?.source).toBe("poi-boundary-westland");
+    // De laag is alleen een hit-target: de zichtbare contour wordt als glyphs getekend.
+    expect(outline?.paint?.["line-opacity"]).toBe(0);
+    // Een vlak krijgt geen marker en geen cirkel: de outline is de vorm.
+    expect(document.querySelector(".map-marker-boundary")).toBeNull();
+    expect(document.querySelectorAll(".map-poi-circle")).toHaveLength(
+      nlContent.pointsOfInterest.filter((point) => point.precision === "approximate").length,
+    );
+
+    act(() => emitLayer("click", "poi-boundary-westland-outline"));
+    expect(screen.getByText("Hier woon ik")).toBeInTheDocument();
+
+    // Framing: fitBounds met de kolom-padding, niet center+zoom, zodat de legenda-ondermarge
+    // de outline niet tegen de bovenrand duwt.
+    const fit = mapMocks.map.fitBounds.mock.calls.at(-1) as unknown[] | undefined;
+    expect(fit).toBeDefined();
+    const [bounds, options] = fit as [[number, number][], { maxZoom?: number }];
+    expect(options.maxZoom).toBe(11);
+    expect(bounds[0][0]).toBeLessThan(bounds[1][0]);
+    expect(bounds[0][1]).toBeLessThan(bounds[1][1]);
+  });
+
+  it("tekent de globale cirkels als overlay die met de zoom meeschalen", () => {
     render(<PortfolioMap content={nlContent} />);
     act(() => emit("styledata"));
 
     const circles = document.querySelectorAll(".map-poi-circle");
-    expect(circles).toHaveLength(1);
+    expect(circles).toHaveLength(
+      nlContent.pointsOfInterest.filter((point) => point.precision === "approximate").length,
+    );
 
     const exact = document.querySelector(".map-marker-exact");
     expect(exact).not.toBeNull();

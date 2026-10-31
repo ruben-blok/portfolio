@@ -1,8 +1,9 @@
 import type { ProjectId } from "@/data/projects";
+import { westlandBoundaryRing } from "@/data/westland-boundary";
 
 export type Position = [longitude: number, latitude: number];
 
-export type PointOfInterestId = "techniek-college-schiedam" | "urbexium-germany";
+export type PointOfInterestId = "techniek-college-schiedam" | "urbexium-germany" | "westland";
 
 type PointOfInterestBaseFields = {
   id: PointOfInterestId;
@@ -23,7 +24,20 @@ export type ApproximatePointOfInterestBase = PointOfInterestBaseFields & {
   radiusKm: number;
 };
 
-export type PointOfInterestBase = ExactPointOfInterestBase | ApproximatePointOfInterestBase;
+/**
+ * An area instead of a point: the ring is drawn as an outline, so there is no radius to
+ * approximate with a circle and no single coordinate to store. Everything positional —
+ * the camera, the OpenStreetMap link — derives from the ring itself.
+ */
+export type BoundaryPointOfInterestBase = PointOfInterestBaseFields & {
+  precision: "boundary";
+  ring: Position[];
+};
+
+export type PointOfInterestBase =
+  | ExactPointOfInterestBase
+  | ApproximatePointOfInterestBase
+  | BoundaryPointOfInterestBase;
 
 export type PointOfInterestText = {
   label: string;
@@ -50,5 +64,12 @@ export const pointOfInterestBase: PointOfInterestBase[] = [
     focusZoom: 7.5,
     maxZoom: 9,
     projectId: "urbexium",
+  },
+  {
+    id: "westland",
+    precision: "boundary",
+    ring: westlandBoundaryRing,
+    focusZoom: 11,
+    maxZoom: 14,
   },
 ];

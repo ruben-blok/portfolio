@@ -10,21 +10,35 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { PoiDetail } from "@/components/poi-detail";
 import type { SiteContent } from "@/content/types";
-import type { PointOfInterest } from "@/data/points-of-interest";
+import type {
+  BoundaryPointOfInterestBase,
+  PointOfInterest,
+  PointOfInterestId,
+} from "@/data/points-of-interest";
 import {
   type AsciiSample,
+  asciiFontSize,
   asciiSample,
   asciiSurface,
   drawAsciiArt,
+  MONOSPACE_STACK,
   toAsciiArt,
   toneForZoom,
 } from "@/lib/ascii-map";
+import {
+  type ContourGrid,
+  haloCells,
+  MIN_CONTOUR_ZOOM,
+  ringToCells,
+  thickenCells,
+} from "@/lib/boundary-contour";
 import {
   circleRadiusPixels,
   GENERAL_MAX_ZOOM,
   openStreetMapUrl,
   pointCamera,
   pointPosition,
+  ringBounds,
   worldCamera,
 } from "@/lib/map-camera";
 import {
@@ -117,6 +131,45 @@ function silenceBasemapSymbols(map: MapLibreMap) {
   }
 }
 
+const boundarySourceId = (id: PointOfInterestId) => `poi-boundary-${id}`;
+const boundaryLayerId = (id: PointOfInterestId) => `poi-boundary-${id}-outline`;
+
+/**
+ * The visible area outline is painted as glyphs on the ASCII canvas (see
+ * `lib/boundary-contour.ts`); the map layer exists only to catch clicks and hover, so it is
+ * transparent and wide enough to aim at. A stroke of a few pixels would anycase average
+ * away in the downscaled frame the ASCII pass reads.
+ */
+const BOUNDARY_HIT_WIDTH = 10;
+
+/** Densest glyphs of the ramp in `lib/ascii-map.ts`, reserved for the area outline. */
+const CONTOUR_GLYPH = "#";
+const CONTOUR_GLYPH_ACTIVE = "@";
+
+/**
+ * An area carries no single spot to hang a marker on, so its ring goes into the style as a
+ * GeoJSON source with a transparent line layer. Interaction lives here; the shape the
+ * visitor sees is drawn on the character grid.
+ */
+function addBoundaryHitArea(map: MapLibreMap, point: BoundaryPointOfInterestBase) {
+  map.addSource(boundarySourceId(point.id), {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: { type: "Polygon", coordinates: [point.ring] },
+    },
+  });
+
+  map.addLayer({
+    id: boundaryLayerId(point.id),
+    type: "line",
+    source: boundarySourceId(point.id),
+    layout: { "line-join": "round", "line-cap": "round" },
+    paint: { "line-color": ASCII_INK, "line-opacity": 0, "line-width": BOUNDARY_HIT_WIDTH },
+  });
+}
+
 export function PortfolioMap({ content }: PortfolioMapProps) {
   const { locale, map: copy, pointsOfInterest: points, projects } = content;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -139,6 +192,10 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
   const [atWorldView, setAtWorldView] = useState(true);
   const [hasMoved, setHasMoved] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  /** Which area is hovered or focused in the list, so its contour is drawn thicker. */
+  const activeBoundaryIdRef = useRef<PointOfInterestId | undefined>(undefined);
+  /** Visible map column, used to frame an area instead of pushing it off-canvas. */
+  const columnPaddingRef = useRef({ top: 0, right: 0, bottom: 0, left: 0 });
 
   const selectedPoint = points.find((point) => point.id === selectedId);
   const selectedProject = projects.find((project) => project.id === selectedPoint?.projectId);
@@ -152,8 +209,24 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
     if (!map) return;
 
     map.setMaxZoom(point.maxZoom);
+    const duration = reduceMotionRef.current ? 0 : POI_FLY_DURATION;
+
+    /**
+     * An area is framed rather than centred. `fitBounds` takes the map column into account,
+     * so the whole outline ends up inside the visible part of the canvas; centring it on the
+     * padded box pushed the top of the shape against the edge and made it look cut off.
+     */
+    if (point.precision === "boundary") {
+      map.fitBounds(ringBounds(point.ring), {
+        padding: columnPaddingRef.current,
+        maxZoom: point.focusZoom,
+        duration,
+      });
+      return;
+    }
+
     const camera = pointCamera(point);
-    const options = { ...camera, duration: reduceMotionRef.current ? 0 : POI_FLY_DURATION };
+    const options = { ...camera, duration };
     if (reduceMotionRef.current) map.jumpTo(options);
     else map.flyTo(options);
   };
@@ -188,6 +261,18 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
   };
 
   selectPointRef.current = selectPoint;
+
+  /**
+   * Emphasises a boundary outline while its list entry is hovered or focused: the contour is
+   * redrawn with a denser glyph and an extra row of cells. A no-op for the point locations.
+   */
+  const emphasizeBoundary = (id: PointOfInterestId, active: boolean) => {
+    if (active) activeBoundaryIdRef.current = id;
+    else if (activeBoundaryIdRef.current === id) activeBoundaryIdRef.current = undefined;
+    else return;
+    // The canvas is only repainted on a map frame, so ask for one.
+    mapRef.current?.triggerRepaint();
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -239,6 +324,60 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
       context.globalCompositeOperation = "destination-in";
       context.drawImage(map.getCanvas(), 0, 0, surface.width, surface.height);
       context.globalCompositeOperation = "source-over";
+
+      /**
+       * The area outline is painted on top of the sheet as real glyphs. Sampling it from the
+       * frame cannot work: the pass reads a downscaled copy where a few-pixel stroke blends
+       * into the roads. Cell space is the one place the outline is guaranteed to land on the
+       * grid, at any width and any zoom.
+       */
+      const zoom = map.getZoom();
+      if (zoom < MIN_CONTOUR_ZOOM) return;
+
+      const grid: ContourGrid = {
+        columns: surface.columns,
+        rows: surface.rows,
+        cellWidth: surface.cellWidth,
+        cellHeight: surface.cellHeight,
+      };
+      const activeId = activeBoundaryIdRef.current;
+
+      context.save();
+      context.fillStyle = ASCII_INK;
+      context.font = `${asciiFontSize(context, surface.cellWidth)}px ${MONOSPACE_STACK}`;
+      context.textAlign = "left";
+      context.textBaseline = "top";
+
+      for (const point of pointsRef.current) {
+        if (point.precision !== "boundary") continue;
+        const active = activeId === point.id;
+        const cells = ringToCells(point.ring, (position) => map.project(position), grid);
+        // Altijd twee cellen dik: één cel verzuipt in de #-clusters van wegen en bebouwing.
+        const drawn = thickenCells(cells, grid, active ? 2 : 1);
+
+        // Eerst een papieren casing van twee cellen: de kaart staat op dit zoomniveau vol
+        // #-clusters, dus de lijn heeft een vrijgehouden goot nodig om te kunnen lezen.
+        context.fillStyle = ASCII_PAPER;
+        for (const cell of haloCells(drawn, grid, 2)) {
+          context.fillRect(
+            cell.column * surface.cellWidth,
+            cell.row * surface.cellHeight,
+            surface.cellWidth,
+            surface.cellHeight,
+          );
+        }
+
+        context.fillStyle = ASCII_INK;
+        for (const cell of drawn) {
+          context.fillText(
+            active ? CONTOUR_GLYPH_ACTIVE : CONTOUR_GLYPH,
+            cell.column * surface.cellWidth,
+            cell.row * surface.cellHeight,
+          );
+        }
+      }
+
+      context.restore();
     };
 
     /**
@@ -296,24 +435,45 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
      * padding at all.
      */
     const centerGlobeOnMapColumn = (map: MapLibreMap) => {
+      const applyPadding = (padding: {
+        top: number;
+        right: number;
+        bottom: number;
+        left: number;
+      }) => map.setPadding(padding);
       const container = containerRef.current;
       const anchor = container?.closest(".hero-grid")?.querySelector(".hero-map-anchor");
+      const legend = container?.closest(".hero-grid")?.querySelector(".map-panel");
+      const legendHeight = legend instanceof HTMLElement ? legend.offsetHeight : 0;
       if (!container || !(anchor instanceof HTMLElement)) {
-        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+        columnPaddingRef.current = { top: 0, right: 0, bottom: legendHeight, left: 0 };
+        applyPadding({ top: 0, right: 0, bottom: 0, left: 0 });
         return;
       }
       if (window.matchMedia("(max-width: 1023px)").matches) {
-        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+        columnPaddingRef.current = { top: 0, right: 0, bottom: legendHeight, left: 0 };
+        applyPadding({ top: 0, right: 0, bottom: 0, left: 0 });
         return;
       }
       const canvasRect = container.getBoundingClientRect();
       const anchorRect = anchor.getBoundingClientRect();
       const anchorCentre = anchorRect.left - canvasRect.left + anchorRect.width / 2;
-      const legend = container.closest(".hero-grid")?.querySelector(".map-panel");
-      map.setPadding({
+      /**
+       * The camera is centred on the map column with a negative left padding — a device for
+       * moving the globe, not a box anything can be framed in. Framing an area needs the
+       * column's real edges, or `fitBounds` thinks it has the whole canvas and the outline
+       * ends up off-centre behind the copy.
+       */
+      columnPaddingRef.current = {
+        top: 0,
+        right: Math.max(0, canvasRect.right - anchorRect.right),
+        bottom: legendHeight,
+        left: Math.max(0, anchorRect.left - canvasRect.left),
+      };
+      applyPadding({
         top: 0,
         right: 0,
-        bottom: legend instanceof HTMLElement ? legend.offsetHeight : 0,
+        bottom: legendHeight,
         // With left padding L the camera centres at (L + width) / 2, so L = 2C - width.
         left: 2 * anchorCentre - canvasRect.width,
       });
@@ -386,6 +546,21 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
                 .setLngLat(pointPosition(point))
                 .addTo(map),
             );
+          }
+
+          if (point.precision === "boundary") {
+            const layerId = boundaryLayerId(point.id);
+            addBoundaryHitArea(map, point);
+            // No marker: the outline itself is the target on the map, so it takes the
+            // same pointer and click affordances a marker would.
+            map.on("mousemove", layerId, () => {
+              map.getCanvas().style.cursor = "pointer";
+            });
+            map.on("mouseleave", layerId, () => {
+              map.getCanvas().style.cursor = "";
+            });
+            map.on("click", layerId, () => selectPointRef.current(point));
+            continue;
           }
 
           const marker = document.createElement("button");
@@ -553,6 +728,10 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
                 key={point.id}
                 type="button"
                 aria-pressed={selectedId === point.id}
+                onPointerEnter={() => emphasizeBoundary(point.id, true)}
+                onPointerLeave={() => emphasizeBoundary(point.id, false)}
+                onFocus={() => emphasizeBoundary(point.id, true)}
+                onBlur={() => emphasizeBoundary(point.id, false)}
                 onClick={() => selectPoint(point)}
               >
                 <span aria-hidden="true">◆</span>

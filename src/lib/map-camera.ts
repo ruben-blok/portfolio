@@ -18,8 +18,31 @@ export function worldCamera(compact: boolean): MapCamera {
   };
 }
 
+export function ringCenter(ring: Position[]): Position {
+  let minLon = Number.POSITIVE_INFINITY;
+  let maxLon = Number.NEGATIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+
+  for (const [longitude, latitude] of ring) {
+    if (longitude < minLon) minLon = longitude;
+    if (longitude > maxLon) maxLon = longitude;
+    if (latitude < minLat) minLat = latitude;
+    if (latitude > maxLat) maxLat = latitude;
+  }
+
+  return [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
+}
+
+/**
+ * The spot a point of interest is aimed at. An area has no coordinate of its own, so its
+ * anchor is the middle of the ring's bounding box — derived here rather than stored, so
+ * the ring stays the single source of truth for the shape.
+ */
 export function pointPosition(point: PointOfInterest): Position {
-  return point.precision === "exact" ? point.position : point.center;
+  if (point.precision === "exact") return point.position;
+  if (point.precision === "boundary") return ringCenter(point.ring);
+  return point.center;
 }
 
 export function pointCamera(point: PointOfInterest): MapCamera {
@@ -29,6 +52,28 @@ export function pointCamera(point: PointOfInterest): MapCamera {
     bearing: 0,
     pitch: point.precision === "exact" ? 38 : 0,
   };
+}
+
+/**
+ * South-west and north-east corner of the ring's bounding box, the shape `fitBounds`
+ * expects. Selecting an area frames the whole of it, because the map padding (the legend
+ * takes height away from the viewport) would otherwise push part of the outline off the
+ * canvas and the shape would read as cut off instead of closed.
+ */
+export function ringBounds(ring: Position[]): [Position, Position] {
+  const [longitude, latitude] = ringCenter(ring);
+  let halfLon = 0;
+  let halfLat = 0;
+
+  for (const [lon, lat] of ring) {
+    halfLon = Math.max(halfLon, Math.abs(lon - longitude));
+    halfLat = Math.max(halfLat, Math.abs(lat - latitude));
+  }
+
+  return [
+    [longitude - halfLon, latitude - halfLat],
+    [longitude + halfLon, latitude + halfLat],
+  ];
 }
 
 export function isValidPosition(position: Position) {
@@ -52,7 +97,8 @@ export function circleRadiusPixels(radiusKm: number, latitude: number, zoom: num
 
 export function openStreetMapUrl(point: PointOfInterest) {
   const [longitude, latitude] = pointPosition(point);
-  const zoom = point.precision === "exact" ? 18 : 8;
+  // An area opens at the zoom that frames the whole municipality rather than a street.
+  const zoom = point.precision === "exact" ? 18 : point.precision === "boundary" ? 11 : 8;
   const marker = point.precision === "exact" ? `?mlat=${latitude}&mlon=${longitude}` : "";
   return `https://www.openstreetmap.org/${marker}#map=${zoom}/${latitude}/${longitude}`;
 }
