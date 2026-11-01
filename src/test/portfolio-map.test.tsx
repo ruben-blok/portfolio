@@ -426,8 +426,13 @@ describe("portfolio-kaart", () => {
     // de outline niet tegen de bovenrand duwt.
     const fit = mapMocks.map.fitBounds.mock.calls.at(-1) as unknown[] | undefined;
     expect(fit).toBeDefined();
-    const [bounds, options] = fit as [[number, number][], { maxZoom?: number }];
-    expect(options.maxZoom).toBe(11);
+    const [bounds, options] = fit as [[number, number][], { maxZoom?: number; padding?: unknown }];
+    // Net onder focusZoom, anders raakt de vorm op 11 de bovenrand van het kaartvlak.
+    expect(options.maxZoom).toBe(10.75);
+    // De padding hoort op de kaart te staan; MapLibre telt de `padding`-optie erbij op en dan
+    // zoomt de fit veel te ver uit.
+    expect(options.padding).toBeUndefined();
+    expect(mapMocks.map.setPadding).toHaveBeenCalled();
     expect(bounds[0][0]).toBeLessThan(bounds[1][0]);
     expect(bounds[0][1]).toBeLessThan(bounds[1][1]);
   });
