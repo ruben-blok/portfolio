@@ -193,6 +193,12 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
   const activeBoundaryIdRef = useRef<PointOfInterestId | undefined>(undefined);
   /** Visible map column, used to frame an area instead of pushing it off-canvas. */
   const columnPaddingRef = useRef({ top: 0, right: 0, bottom: 0, left: 0 });
+  /** Camera-centring padding (negative left), used for the globe and point locations. */
+  const cameraPaddingRef = useRef({ top: 0, right: 0, bottom: 0, left: 0 });
+  /** True while an area is framed; only one of the two paddings may be live at a time. */
+  const boundaryFramingRef = useRef(false);
+  /** Column box plus inset, used while an area is framed. */
+  const boundaryPaddingRef = useRef({ top: 0, right: 0, bottom: 0, left: 0 });
 
   const selectedPoint = points.find((point) => point.id === selectedId);
   const selectedProject = projects.find((project) => project.id === selectedPoint?.projectId);
@@ -214,14 +220,32 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
      * padded box pushed the top of the shape against the edge and made it look cut off.
      */
     if (point.precision === "boundary") {
+      boundaryFramingRef.current = true;
+      /**
+       * Alleen de kaart-padding zetten, geen `padding` meegeven aan `fitBounds`: MapLibre telt
+       * die twee op, waardoor het beschikbare vlak krimpt en de kaart veel te ver uitzoomt.
+       * De inset houdt de outline vrij van de randen van het kaartvlak.
+       */
+      const inset = 14;
+      const column = columnPaddingRef.current;
+      boundaryPaddingRef.current = {
+        top: column.top + inset,
+        right: column.right + inset,
+        bottom: column.bottom + inset,
+        left: column.left + inset,
+      };
+      map.setPadding(boundaryPaddingRef.current);
       map.fitBounds(ringBounds(point.ring), {
-        padding: columnPaddingRef.current,
-        maxZoom: point.focusZoom,
+        // Net onder focusZoom: op precies 11 is de gemeente een paar pixel hoger dan het
+        // kaartvlak, waardoor de fit tegen de cap aanloopt en de rand de bovenrand raakt.
+        maxZoom: point.focusZoom - 0.25,
         duration,
       });
       return;
     }
 
+    boundaryFramingRef.current = false;
+    map.setPadding(cameraPaddingRef.current);
     const camera = pointCamera(point);
     const options = { ...camera, duration };
     if (reduceMotionRef.current) map.jumpTo(options);
@@ -241,6 +265,8 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
     if (!map) return;
 
     map.setMaxZoom(GENERAL_MAX_ZOOM);
+    boundaryFramingRef.current = false;
+    map.setPadding(cameraPaddingRef.current);
     const compact = window.matchMedia("(max-width: 767px)").matches;
     const options = {
       ...worldCamera(compact),
@@ -438,48 +464,50 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
      * padding at all.
      */
     const centerGlobeOnMapColumn = (map: MapLibreMap) => {
-      const applyPadding = (padding: {
-        top: number;
-        right: number;
-        bottom: number;
-        left: number;
-      }) => map.setPadding(padding);
+      /**
+       * Two paddings exist, and only one may be live: the camera-centring one (negative
+       * left) is a device for placing the globe, while the column one is the real visible
+       * box. `fitBounds` already accounts for the padding it is given, so leaving the
+       * camera padding on during a fit shifts the area a second time — that is what pushed
+       * the outline 246 px (half of the left padding) off-centre.
+       */
+      const applyPadding = () =>
+        map.setPadding(
+          boundaryFramingRef.current ? boundaryPaddingRef.current : cameraPaddingRef.current,
+        );
       const container = containerRef.current;
       const anchor = container?.closest(".hero-grid")?.querySelector(".hero-map-anchor");
       const legend = container?.closest(".hero-grid")?.querySelector(".map-panel");
       const legendHeight = legend instanceof HTMLElement ? legend.offsetHeight : 0;
       if (!container || !(anchor instanceof HTMLElement)) {
         columnPaddingRef.current = { top: 0, right: 0, bottom: legendHeight, left: 0 };
-        applyPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+        cameraPaddingRef.current = { top: 0, right: 0, bottom: 0, left: 0 };
+        applyPadding();
         return;
       }
       if (window.matchMedia("(max-width: 1023px)").matches) {
         columnPaddingRef.current = { top: 0, right: 0, bottom: legendHeight, left: 0 };
-        applyPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+        cameraPaddingRef.current = { top: 0, right: 0, bottom: 0, left: 0 };
+        applyPadding();
         return;
       }
       const canvasRect = container.getBoundingClientRect();
       const anchorRect = anchor.getBoundingClientRect();
       const anchorCentre = anchorRect.left - canvasRect.left + anchorRect.width / 2;
-      /**
-       * The camera is centred on the map column with a negative left padding — a device for
-       * moving the globe, not a box anything can be framed in. Framing an area needs the
-       * column's real edges, or `fitBounds` thinks it has the whole canvas and the outline
-       * ends up off-centre behind the copy.
-       */
       columnPaddingRef.current = {
         top: 0,
         right: Math.max(0, canvasRect.right - anchorRect.right),
         bottom: legendHeight,
         left: Math.max(0, anchorRect.left - canvasRect.left),
       };
-      applyPadding({
+      cameraPaddingRef.current = {
         top: 0,
         right: 0,
         bottom: legendHeight,
         // With left padding L the camera centres at (L + width) / 2, so L = 2C - width.
         left: 2 * anchorCentre - canvasRect.width,
-      });
+      };
+      applyPadding();
     };
 
     /**
