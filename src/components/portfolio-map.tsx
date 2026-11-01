@@ -17,21 +17,13 @@ import type {
 } from "@/data/points-of-interest";
 import {
   type AsciiSample,
-  asciiFontSize,
   asciiSample,
   asciiSurface,
   drawAsciiArt,
-  MONOSPACE_STACK,
   toAsciiArt,
   toneForZoom,
 } from "@/lib/ascii-map";
-import {
-  type ContourGrid,
-  haloCells,
-  MIN_CONTOUR_ZOOM,
-  ringToCells,
-  thickenCells,
-} from "@/lib/boundary-contour";
+import { MIN_OUTLINE_ZOOM, projectRing, ringIsOnScreen } from "@/lib/boundary-outline";
 import {
   circleRadiusPixels,
   GENERAL_MAX_ZOOM,
@@ -142,9 +134,12 @@ const boundaryLayerId = (id: PointOfInterestId) => `poi-boundary-${id}-outline`;
  */
 const BOUNDARY_HIT_WIDTH = 10;
 
-/** Densest glyphs of the ramp in `lib/ascii-map.ts`, reserved for the area outline. */
-const CONTOUR_GLYPH = "#";
-const CONTOUR_GLYPH_ACTIVE = "@";
+/** Stroke widths for the drawn outline, in CSS pixels; the active one is heavier. */
+const OUTLINE_WIDTH = 3;
+const OUTLINE_WIDTH_ACTIVE = 5;
+/** Paper-coloured casing so the line stays readable where the ASCII art is dark. */
+const OUTLINE_CASING = 7;
+const OUTLINE_CASING_ACTIVE = 9;
 
 /**
  * An area carries no single spot to hang a marker on, so its ring goes into the style as a
@@ -182,6 +177,8 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
   const reduceMotionRef = useRef(false);
   const selectPointRef = useRef<(point: PointOfInterest) => void>(() => undefined);
   const asciiCanvasRef = useRef<HTMLCanvasElement>(null);
+  /** Separate canvas for the vector outline, drawn above the ASCII art. */
+  const outlineCanvasRef = useRef<HTMLCanvasElement>(null);
   const measureContextRef = useRef<CanvasRenderingContext2D | null>(null);
   const labelsFrameRef = useRef<number | undefined>(undefined);
   const pendingLabelsRef = useRef(false);
@@ -324,60 +321,66 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
       context.globalCompositeOperation = "destination-in";
       context.drawImage(map.getCanvas(), 0, 0, surface.width, surface.height);
       context.globalCompositeOperation = "source-over";
+    };
 
-      /**
-       * The area outline is painted on top of the sheet as real glyphs. Sampling it from the
-       * frame cannot work: the pass reads a downscaled copy where a few-pixel stroke blends
-       * into the roads. Cell space is the one place the outline is guaranteed to land on the
-       * grid, at any width and any zoom.
-       */
-      const zoom = map.getZoom();
-      if (zoom < MIN_CONTOUR_ZOOM) return;
+    /**
+     * The area outline is a real stroked line on its own canvas above the ASCII art. Drawn
+     * from glyphs it read as a chain of blocks; a vector stroke stays a crisp edge. The
+     * paper casing keeps it legible over the dense character map.
+     */
+    const drawOutlineLayer = (map: MapLibreMap) => {
+      const canvas = outlineCanvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
 
-      const grid: ContourGrid = {
-        columns: surface.columns,
-        rows: surface.rows,
-        cellWidth: surface.cellWidth,
-        cellHeight: surface.cellHeight,
-      };
+      const cssWidth = container.clientWidth;
+      const cssHeight = container.clientHeight;
+      if (!cssWidth || !cssHeight) return;
+
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.round(cssWidth * ratio);
+      const height = Math.round(cssHeight * ratio);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      context.clearRect(0, 0, cssWidth, cssHeight);
+
+      if (map.getZoom() < MIN_OUTLINE_ZOOM) return;
+
       const activeId = activeBoundaryIdRef.current;
-
-      context.save();
-      context.fillStyle = ASCII_INK;
-      context.font = `${asciiFontSize(context, surface.cellWidth)}px ${MONOSPACE_STACK}`;
-      context.textAlign = "left";
-      context.textBaseline = "top";
+      context.lineJoin = "round";
+      context.lineCap = "round";
 
       for (const point of pointsRef.current) {
         if (point.precision !== "boundary") continue;
+
+        const points = projectRing(point.ring, (position) => map.project(position));
+        const start = points[0];
+        if (!start || !ringIsOnScreen(points, { width: cssWidth, height: cssHeight })) continue;
+
         const active = activeId === point.id;
-        const cells = ringToCells(point.ring, (position) => map.project(position), grid);
-        // Altijd twee cellen dik: één cel verzuipt in de #-clusters van wegen en bebouwing.
-        const drawn = thickenCells(cells, grid, active ? 2 : 1);
-
-        // Eerst een papieren casing van twee cellen: de kaart staat op dit zoomniveau vol
-        // #-clusters, dus de lijn heeft een vrijgehouden goot nodig om te kunnen lezen.
-        context.fillStyle = ASCII_PAPER;
-        for (const cell of haloCells(drawn, grid, 2)) {
-          context.fillRect(
-            cell.column * surface.cellWidth,
-            cell.row * surface.cellHeight,
-            surface.cellWidth,
-            surface.cellHeight,
-          );
+        context.beginPath();
+        context.moveTo(start.x, start.y);
+        for (let index = 1; index < points.length; index += 1) {
+          const next = points[index];
+          if (next) context.lineTo(next.x, next.y);
         }
+        context.closePath();
 
-        context.fillStyle = ASCII_INK;
-        for (const cell of drawn) {
-          context.fillText(
-            active ? CONTOUR_GLYPH_ACTIVE : CONTOUR_GLYPH,
-            cell.column * surface.cellWidth,
-            cell.row * surface.cellHeight,
-          );
-        }
+        context.strokeStyle = ASCII_PAPER;
+        context.lineWidth = active ? OUTLINE_CASING_ACTIVE : OUTLINE_CASING;
+        context.stroke();
+
+        context.strokeStyle = ASCII_INK;
+        context.lineWidth = active ? OUTLINE_WIDTH_ACTIVE : OUTLINE_WIDTH;
+        context.stroke();
       }
-
-      context.restore();
     };
 
     /**
@@ -612,6 +615,7 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
        */
       map.on("render", () => {
         drawAsciiLayer(map);
+        drawOutlineLayer(map);
         if (labelsDirtyRef.current) refreshLabels(map);
       });
 
@@ -693,6 +697,10 @@ export function PortfolioMap({ content }: PortfolioMapProps) {
         */}
         <div className="map-ascii-layer" aria-hidden="true">
           <canvas ref={asciiCanvasRef} className="map-ascii" />
+        </div>
+        {/* De gebiedsgrens als echte lijn: een contour van glyphs leest als losse blokken. */}
+        <div className="map-outline-layer" aria-hidden="true">
+          <canvas ref={outlineCanvasRef} className="map-outline" data-testid="map-outline" />
         </div>
         <div className="map-labels" aria-hidden="true">
           {labels.map((label) => (
