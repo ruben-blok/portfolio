@@ -44,14 +44,15 @@ describe("grenscontour als vectorlijn", () => {
     expect(ringIsOnScreen(points, SIZE)).toBe(true);
   });
 
-  it("meet de gemeente op focusZoom 11 op ongeveer 580 px breed", () => {
+  it("meet de gemeente op focusZoom 11 op ongeveer 540 px breed", () => {
     const points = projectRing(westlandRing(), mercator(11));
     const xs = points.map((point) => point.x);
     const width = Math.max(...xs) - Math.min(...xs);
 
-    // 13,7 km bij ~23,5 m/px.
-    expect(width).toBeGreaterThan(540);
-    expect(width).toBeLessThan(620);
+    // 12,6 km bij ~23,5 m/px: de officiële grens volgt de kust, dus smaller dan de OSM-variant
+    // die ~1 km de zee in stak (die was 588 px).
+    expect(width).toBeGreaterThan(500);
+    expect(width).toBeLessThan(580);
   });
 
   it("levert niets op als de kijkhoek buiten de kaart valt", () => {
