@@ -3,7 +3,7 @@ import type { SiteContent } from "@/content/types";
 
 export function SiteHeader({ content }: { content: SiteContent }) {
   return (
-    <header className="border-b border-rule bg-paper md:sticky md:top-0 md:z-20">
+    <header className="border-b border-rule bg-paper md:sticky md:top-0 md:z-30">
       <div className="shell flex flex-col gap-1 py-4 md:flex-row md:items-baseline md:justify-between md:gap-8 md:py-5">
         <a
           href="#top"

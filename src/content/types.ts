@@ -23,6 +23,18 @@ export type SectionCopy = {
   lead: string;
 };
 
+export type FooterCopy = {
+  pagesLabel: string;
+  projectsLabel: string;
+  locationLabel: string;
+  siteLabel: string;
+  connectLabel: string;
+  source: string;
+  country: string;
+  builtWith: string;
+  emailSubject: string;
+};
+
 export type LanguageSwitchCopy = {
   label: string;
   ariaLabel: string;
@@ -70,8 +82,8 @@ export type SiteContent = {
     projects: SectionCopy;
     stack: SectionCopy;
     education: SectionCopy;
-    contact: SectionCopy;
   };
+  footer: FooterCopy;
   ui: {
     skipToContent: string;
     backToTop: string;

@@ -131,11 +131,17 @@ export const nlContent: SiteContent = {
       title: "Opleiding",
       lead: "Van havo naar software development.",
     },
-    contact: {
-      id: "contact",
-      title: "Contact",
-      lead: "Voor een stage, een samenwerking of een vraag over een van mijn projecten.",
-    },
+  },
+  footer: {
+    pagesLabel: "Pagina",
+    projectsLabel: "Projecten",
+    locationLabel: "Locatie",
+    siteLabel: "Site",
+    connectLabel: "Connect",
+    source: "Bron op GitHub",
+    country: "Nederland",
+    builtWith: "Gemaakt met Next.js",
+    emailSubject: "Stageaanvraag",
   },
   ui: {
     skipToContent: "Direct naar inhoud",

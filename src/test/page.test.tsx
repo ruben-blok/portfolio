@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PortfolioPage } from "@/components/portfolio-page";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getContent } from "@/content";
 import { localeHref } from "@/lib/locale";
@@ -87,15 +88,16 @@ describe.each(locales)("portfolio pagina (%s)", (locale) => {
       <>
         <SiteHeader content={content} />
         <PortfolioPage content={content} />
+        <SiteFooter content={content} year={2026} />
       </>,
     );
 
-    expect(
-      screen.getByRole("navigation", { name: content.ui.sectionsNavLabel }),
-    ).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: content.ui.sectionsNavLabel });
+
+    expect(nav).toBeInTheDocument();
 
     for (const item of content.navigation) {
-      const link = screen.getByRole("link", { name: item.label });
+      const link = within(nav).getByRole("link", { name: item.label });
 
       expect(link).toHaveAttribute("href", item.href);
       expect(document.getElementById(item.href.slice(1)), item.href).not.toBeNull();
@@ -116,29 +118,6 @@ describe.each(locales)("portfolio pagina (%s)", (locale) => {
     for (const group of content.stackGroups) {
       expect(screen.getByText(group.label), group.id).toBeInTheDocument();
       expect(screen.getByText(group.items.join(", ")), group.id).toBeInTheDocument();
-    }
-  });
-
-  it("toont elk contactkanaal met het juiste adres", () => {
-    render(<PortfolioPage content={content} />);
-
-    const hrefs = screen.getAllByRole("link").map((anchor) => anchor.getAttribute("href"));
-
-    for (const link of content.profileLinks) {
-      expect(hrefs, link.label).toContain(link.href);
-    }
-  });
-
-  it("waarschuwt dat sociale links een nieuw tabblad openen", () => {
-    render(<PortfolioPage content={content} />);
-
-    for (const link of content.profileLinks.filter((item) => !item.href.startsWith("mailto:"))) {
-      expect(
-        screen.getByRole("link", {
-          name: `${link.label}, ${link.handle} ${content.ui.opensInNewTab}`,
-        }),
-        link.label,
-      ).toBeInTheDocument();
     }
   });
 

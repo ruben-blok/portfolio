@@ -11,6 +11,8 @@ type RootShellProps = {
 };
 
 export function RootShell({ content, fontClassName, children }: RootShellProps) {
+  const year = new Date().getFullYear();
+
   return (
     <html lang={content.locale} className={fontClassName}>
       <body>
@@ -22,8 +24,10 @@ export function RootShell({ content, fontClassName, children }: RootShellProps) 
           {content.ui.skipToContent}
         </a>
         <SiteHeader content={content} />
-        <main id="main">{children}</main>
-        <SiteFooter content={content} />
+        <main id="main" className="relative z-10 bg-paper">
+          {children}
+        </main>
+        <SiteFooter content={content} year={year} />
       </body>
     </html>
   );

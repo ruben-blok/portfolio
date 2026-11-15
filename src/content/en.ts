@@ -131,11 +131,17 @@ export const enContent: SiteContent = {
       title: "Education",
       lead: "From secondary school to software development.",
     },
-    contact: {
-      id: "contact",
-      title: "Contact",
-      lead: "For an internship, a collaboration or a question about one of my projects.",
-    },
+  },
+  footer: {
+    pagesLabel: "Page",
+    projectsLabel: "Projects",
+    locationLabel: "Location",
+    siteLabel: "Site",
+    connectLabel: "Connect",
+    source: "Source on GitHub",
+    country: "Netherlands",
+    builtWith: "Built with Next.js",
+    emailSubject: "Internship",
   },
   ui: {
     skipToContent: "Skip to content",

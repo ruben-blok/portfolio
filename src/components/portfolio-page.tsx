@@ -1,4 +1,3 @@
-import { ContactSection } from "@/components/contact-section";
 import { EducationList } from "@/components/education-list";
 import { Hero } from "@/components/hero";
 import { ProjectIndex } from "@/components/project-index";
@@ -12,7 +11,6 @@ export function PortfolioPage({ content }: { content: SiteContent }) {
       <ProjectIndex content={content} />
       <StackList content={content} />
       <EducationList content={content} />
-      <ContactSection content={content} />
     </>
   );
 }
